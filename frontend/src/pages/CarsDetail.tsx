@@ -3,9 +3,9 @@ import { useFetchData } from "@/utils/api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-type Energie = "diesel" | "essence" | "electrique";
+export type Energie = "diesel" | "essence" | "hybride";
 
-interface Voiture {
+export interface Voiture {
   marque: string;
   modele: string;
   annee: number;
@@ -19,7 +19,10 @@ interface Voiture {
 
 export default function VoitureDetailAdmin() {
   const { id } = useParams(); 
-  const { data: voiture, loading, error } = useFetchData<Voiture>( `${API_URL}/voitures/${id}`);
+const { data: voiture, loading, error } = useFetchData<Voiture>(
+  id ? `${API_URL}/voitures/${id}` : ""
+);
+
 
   if (loading) return <p className="text-center mt-10">Chargement...</p>;
   if (error) return <p className="text-center text-red-500 mt-10">Erreur : {error}</p>;
@@ -45,7 +48,7 @@ export default function VoitureDetailAdmin() {
             <p>Année : {voiture.annee}</p>
             <p>Type : {voiture.type}</p>
             <p>Kilométrage : {voiture.kilometrage} km</p>
-            <p>Immatriculation : {voiture.immatriculation}</p>
+          
             <p>Prix par jour : {voiture.prixParJour} €</p>
             <p
               className={`font-semibold mt-3 ${

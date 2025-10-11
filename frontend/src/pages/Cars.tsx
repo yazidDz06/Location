@@ -1,10 +1,11 @@
 import { useFetchData } from "@/utils/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/ui/Footer"; // 
-
+import { useNavigate } from "react-router-dom";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 interface Car {
+    _id: string;
   marque: string;
   modele: string;
   annee: string;
@@ -14,17 +15,20 @@ interface Car {
 }
 
 export default function CarsList() {
+    const navigate = useNavigate();
   const { data: cars, loading, error } = useFetchData<Car[]>(`${API_URL}/voitures`);
  // {data:cars} c'est pour renomer data récupérés par la fonction génerique et lui attribuer un nom localement
   if (loading) return <p className="text-center mt-10">Chargement...</p>;
   if (error) return <p className="text-center text-red-500 mt-10">Erreur : {error}</p>;
-
+const handleClick = (id: string) => {
+    navigate(`/voitures/${id}`);
+  };
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      {/* ✅ Navbar en haut */}
+      
       <Navbar />
 
-      {/* ✅ Liste des voitures */}
+     
       <main className="flex-grow container mx-auto px-6 py-10">
         <h1 className="text-2xl font-bold mb-8 text-gray-900 dark:text-white text-center">
           Liste des voitures disponibles
@@ -35,6 +39,7 @@ export default function CarsList() {
             <div
               key={index}
               className="bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden hover:scale-[1.02] transition-transform"
+                onClick={() => handleClick(car._id)}
             >
               <img
                 src={car.imageUrl}

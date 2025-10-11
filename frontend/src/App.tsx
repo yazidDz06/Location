@@ -4,8 +4,9 @@ import { ThemeProvider } from "./components/themeProvider";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import CarsList from "./pages/Cars";
-import CarsAdmin from "./pages/Admin/CarsAdmin";
-import VoitureDetailAdmin from "./pages/Admin/CarsDetail";
+import LoginAdmin from "./pages/Admin/LoginAdmin";
+import VoitureDetailAdmin from "./pages/CarsDetail";
+import AllCars from "./pages/Admin/AllCarsGetCreate";
 export default function App() {
 
 
@@ -18,8 +19,9 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/Register" element={<Register />} />
              <Route path="/Voitures" element={<CarsList />} />
-             <Route path="/carsAdmin" element={<CarsAdmin />} />
-             <Route path="/carDetailAdmin" element={<VoitureDetailAdmin />} />
+             <Route path="/voitures/:id" element={<VoitureDetailAdmin />} />
+              <Route path="/adminlog" element={<LoginAdmin />} />
+              <Route path="/admin/cars" element={<AllCars />} />
           </Routes>
         </ThemeProvider>
       </BrowserRouter>

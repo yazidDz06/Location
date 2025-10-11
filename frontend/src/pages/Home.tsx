@@ -6,7 +6,9 @@ import { FaMapMarkerAlt, FaCalendarAlt, FaCar, FaTags, FaComments, FaBolt } from
 import golf from "../assets/golf.webp";
 import MarquesSection from "@/components/ui/marque";
 import Footer from "@/components/ui/Footer";
+import { useNavigate } from "react-router-dom";
 export default function Home() {
+    const navigate = useNavigate();
     const { theme } = useTheme();
 
     return (
@@ -15,7 +17,7 @@ export default function Home() {
 
             {/* Section Hero */}
             <section className="flex flex-col-reverse md:flex-row items-center justify-between px-6 sm:px-10 md:px-16 lg:px-24 py-10 md:py-20 gap-10 md:gap-0">
-                {/*  Partie gauche - voiture animée */}
+                
                 <div className="w-full md:w-1/2 flex justify-center items-center overflow-hidden">
                     <motion.img
                         src={CarSvg}
@@ -49,6 +51,7 @@ export default function Home() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300 text-sm sm:text-base"
+                            onClick={()=>navigate('/Voitures')}
                         >
                             Réserver maintenant
                         </motion.button>

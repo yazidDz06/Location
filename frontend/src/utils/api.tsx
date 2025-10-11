@@ -9,7 +9,10 @@ export function useFetchData<T>(url: string) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(url, { method: "GET", credentials: "include" });
+         if (!url) return; 
+        const res = await fetch(url, { method: "GET", credentials: "include",  headers: {
+    "Content-Type": "application/json",
+  }, });
         if (!res.ok) throw new Error("Erreur serveur");
         const json = (await res.json()) as T;
         setData(json);

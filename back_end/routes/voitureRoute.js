@@ -5,7 +5,7 @@ const adminMiddleware = require("../middleware/adminMiddleware");
 const authMiddleware = require("../middleware/authMiddleware");
 
 // Get all cars
-router.get("/", async (req, res) => {
+router.get("/", authMiddleware ,async (req, res) => {
   try {
     const voitures = await Voiture.find();
     res.status(200).json(voitures);
@@ -15,7 +15,7 @@ router.get("/", async (req, res) => {
 });
 
 // Create a new car
-router.post("/", adminMiddleware, async (req, res) => {
+router.post("/",authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { marque, modele, annee, type, immatriculation, prixParJour, kilometrage, imageUrl } = req.body;
     const voiture = await Voiture.create({
