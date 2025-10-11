@@ -3,7 +3,7 @@ import { useFetchData } from "@/utils/api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-export type Energie = "diesel" | "essence" | "hybride";
+ type Energie = "diesel" | "essence" | "hybride";
 
 export interface Voiture {
   marque: string;

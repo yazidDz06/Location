@@ -63,6 +63,36 @@ export function usePostData<T, R = any>(url: string) {
 
   return { postData, data, loading, error };
 }
+//fonction génerique pour des requetes Update et delete
+export function useSendData<T, R = any>(url: string, method: "PUT" | "DELETE") {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<R | null>(null);
 
-  
-   
+  const sendData = async (payload: T): Promise<R | void> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP : ${response.status}`);
+      }
+
+      const result = await response.json();
+      setData(result);
+      return result;
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { sendData, data, loading, error };
+}

@@ -52,7 +52,7 @@ router.get("/:id", authMiddleware,async (req, res) => {
 });
 
 // Update a car
-router.put("/:id",adminMiddleware, async (req, res) => {
+router.put("/:id",authMiddleware ,adminMiddleware, async (req, res) => {
   const { id } = req.params;
   const { prixParJour, disponible, kilometrage } = req.body;
 
@@ -90,7 +90,7 @@ router.put("/:id",adminMiddleware, async (req, res) => {
 
 
 // Delete a car
-router.delete("/:id",adminMiddleware, async (req, res) => {
+router.delete("/:id",authMiddleware ,adminMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
     const voiture = await Voiture.findByIdAndDelete(id);

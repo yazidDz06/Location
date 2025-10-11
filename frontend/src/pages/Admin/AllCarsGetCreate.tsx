@@ -5,7 +5,7 @@ import type { Voiture } from "../CarsDetail";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function AllCars() {
-  // 🔹 Récupération des voitures existantes
+ 
   const { data: carsData, loading, error } = useFetchData<Voiture[]>(`${API_URL}/voitures`);
   const { postData, loading: posting, error: postError } = usePostData<Voiture, Voiture>(`${API_URL}/voitures`);
 
