@@ -69,7 +69,7 @@ export function useSendData<T, R = any>(url: string, method: "PUT" | "DELETE") {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<R | null>(null);
 
-  const sendData = async (payload: T): Promise<R | void> => {
+  const sendData = async (payload?: T): Promise<R | void> => {
     setLoading(true);
     setError(null);
     try {
@@ -81,7 +81,7 @@ export function useSendData<T, R = any>(url: string, method: "PUT" | "DELETE") {
       });
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP : ${response.status}`);
+        throw new Error(`Erreur innatendue : ${response.status}`);
       }
 
       const result = await response.json();

@@ -20,8 +20,8 @@ export default function CarsList() {
  // {data:cars} c'est pour renomer data récupérés par la fonction génerique et lui attribuer un nom localement
   if (loading) return <p className="text-center mt-10">Chargement...</p>;
   if (error) return <p className="text-center text-red-500 mt-10">Erreur : {error}</p>;
-const handleClick = (id: string) => {
-    navigate(`/voitures/${id}`);
+const handleClick = (_id: string) => {
+    navigate(`/voitures/${_id}`);
   };
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">

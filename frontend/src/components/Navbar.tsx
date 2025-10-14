@@ -4,16 +4,34 @@ import { FaSun, FaMoon } from "react-icons/fa";
 import { FiMenu, FiX } from "react-icons/fi";
 import logo from "../assets/log.svg";
 import { useNavigate } from "react-router-dom";
-
+import { useFetchData } from "@/utils/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function Navbar() {
   const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  interface User {
+    nom: string,
+    prenom: string
+  }
+  const { data: user, loading, error } = useFetchData<User>(`${API_URL}/users/profile`);
+  if (loading) return <p className="text-center mt-10">Chargement...</p>;
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_URL}/users/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+     navigate("/")
+    } catch (err) {
+      console.error("Erreur de déconnexion :", err);
+    }
+  };
   return (
     <nav
-      className={`w-full h-18 relative z-[100] top-0 left-0 px-8  ${
-        theme === "dark" ? "bg-gray-900 text-white" : "bg-white text-black"
-      }`}
+      className={`w-full h-18 relative z-[100] top-0 left-0 px-8  ${theme === "dark" ? "bg-gray-900 text-white" : "bg-white text-black"
+        }`}
     >
       <div className="flex items-center justify-between p-4 gap-4">
         {/* Logo */}
@@ -34,16 +52,30 @@ export default function Navbar() {
           <a href="#contact" className="hover:text-blue-500 font-semibold py-2">
             Contactez-nous
           </a>
-          <button
-            className={`px-4 py-2 rounded-xl font-semibold transition ${
-              theme === "dark"
-                ? "text-white bg-gradient-to-br from-yellow-600 via-green-600 to-red-400 hover:opacity-80"
-                : "text-black bg-blue-500 hover:bg-blue-700 hover:text-gray-100"
-            }`}
-            onClick={()=>navigate('/login')}
-          >
-            Connexion
-          </button>
+          {!loading && (
+            <div className="flex items-center gap-4">
+              {user ? (
+                <>
+                  <span className="text-blue-500 font-bold">
+                    Salut, {user.nom} {user.prenom}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 text-white font-semibold px-4 py-2 rounded-xl hover:bg-red-600 transition"
+                  >
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => navigate("/login")}
+                  className="bg-blue-500 px-4 py-2 rounded-xl font-semibold text-white hover:bg-blue-600 transition"
+                >
+                  Connexion
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bouton Thème */}
@@ -93,16 +125,30 @@ export default function Navbar() {
           >
             Contact
           </a>
-          <button
-            className={`px-4 py-2 rounded-xl font-semibold transition ${
-              theme === "dark"
-                ? "text-white bg-gradient-to-br from-yellow-600 via-green-600 to-red-400 hover:opacity-80"
-                : "text-black bg-blue-200 hover:bg-blue-700 hover:text-white"
-            }`}
-             onClick={()=>navigate('/login')}
-          >
-            Connexion
-          </button>
+            {!loading && (
+            <div className="flex items-center gap-4">
+              {user ? (
+                <>
+                  <span className="text-blue-500 font-bold">
+                    Salut, {user.nom} {user.prenom}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 text-white px-4 py-2 rounded-xl font-semibold hover:bg-red-600 transition"
+                  >
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => navigate("/login")}
+                  className="bg-blue-500 px-4 py-2 rounded-xl font-semibold text-white hover:bg-blue-600 transition"
+                >
+                  Connexion
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </nav>

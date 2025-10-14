@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {  useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-export default function CarUpdateAndDelete(){
+export default function CarUpdate(){
     type CarUpdate = Partial<Pick<Voiture, "prixParJour" | "kilometrage" | "disponible">>;
 
     const { id } = useParams<{ id: string }>();

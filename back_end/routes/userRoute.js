@@ -109,19 +109,24 @@ router.post("/login", async (req, res) => {
 
 //logout 
 router.post("/logout", (req, res) => {
-  res.cookie("token", "", { expires: new Date(0) });
-  res.json({ message: "Déconnexion réussie" });
-});
-//get current user
-router.get("/current", authMiddleware, (req, res) => {
-  res.json({ user: req.user }); 
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+     path: "/",
+  });
+
+  res.status(200).json({ message: "Déconnexion réussie" });
 });
 
+
 router.get("/profile", authMiddleware, (req, res) => {
-  res.json({ message: `Bienvenue ${req.user.nom} ${req.user.prenom}` });
+  const { nom, prenom } = req.user;
+  res.json({ nom, prenom });
 });
+
 //get all users (admin only)
-router.get("/", adminMiddleware,async (req, res) => {
+router.get("/", authMiddleware,adminMiddleware,async (req, res) => {
   try {
     const users = await User.find().select("-password");
     res.json({ users });
@@ -131,7 +136,7 @@ router.get("/", adminMiddleware,async (req, res) => {
   }
 });
 //delete user (admin only)
-router.delete("/:id", adminMiddleware, async (req, res) => {
+router.delete("/:id",authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) {

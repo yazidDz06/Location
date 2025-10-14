@@ -6,6 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
  type Energie = "diesel" | "essence" | "hybride";
 
 export interface Voiture {
+  _id?: string;
   marque: string;
   modele: string;
   annee: number;
@@ -17,7 +18,7 @@ export interface Voiture {
   imageUrl: string;
 }
 
-export default function VoitureDetailAdmin() {
+export default function VoitureDetail() {
   const { id } = useParams(); 
 const { data: voiture, loading, error } = useFetchData<Voiture>(
   id ? `${API_URL}/voitures/${id}` : ""

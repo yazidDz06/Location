@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import { useFetchData, usePostData } from "@/utils/api";
 import type { Voiture } from "../CarsDetail";
-
+import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function AllCars() {
- 
+
+
+  const { id } = useParams<{ id: string }>();
+
+  const navigate = useNavigate();
   const { data: carsData, loading, error } = useFetchData<Voiture[]>(`${API_URL}/voitures`);
   const { postData, loading: posting, error: postError } = usePostData<Voiture, Voiture>(`${API_URL}/voitures`);
 
@@ -16,12 +21,12 @@ export default function AllCars() {
     if (carsData) setCars(carsData);
   }, [carsData]);
 
-  
+
   const [formData, setFormData] = useState<Voiture>({
     marque: "",
     modele: "",
     annee: 2020,
-    type: "essence", 
+    type: "essence",
     immatriculation: "",
     prixParJour: 0,
     disponible: true,
@@ -41,34 +46,34 @@ export default function AllCars() {
 
   //  Soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // Conversion manuelle des champs numériques
-  const carToSend = {
-    ...formData,
-    annee: Number(formData.annee),
-    prixParJour: Number(formData.prixParJour),
-    kilometrage: Number(formData.kilometrage),
+    // Conversion manuelle des champs numériques
+    const carToSend = {
+      ...formData,
+      annee: Number(formData.annee),
+      prixParJour: Number(formData.prixParJour),
+      kilometrage: Number(formData.kilometrage),
+    };
+
+    const newCar = await postData(carToSend);
+
+    if (newCar) {
+      setCars((prev) => [...prev, newCar]);
+      setFormData({
+        marque: "",
+        modele: "",
+        annee: 2020,
+        type: "essence",
+        immatriculation: "",
+        prixParJour: 0,
+        disponible: true,
+        kilometrage: 0,
+        imageUrl: "",
+      });
+      setIsOpen(false);
+    }
   };
-
-  const newCar = await postData(carToSend);
-
-  if (newCar) {
-    setCars((prev) => [...prev, newCar]);
-    setFormData({
-      marque: "",
-      modele: "",
-      annee: 2020,
-      type: "essence",
-      immatriculation: "",
-      prixParJour: 0,
-      disponible: true,
-      kilometrage: 0,
-      imageUrl: "",
-    });
-    setIsOpen(false);
-  }
-};
 
   if (loading) return <p className="text-center mt-10">Chargement...</p>;
   if (error) return <p className="text-center text-red-500 mt-10 font-bold">Erreur : {error}</p>;
@@ -76,7 +81,7 @@ export default function AllCars() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <main className="flex-grow container mx-auto px-6 py-10">
-       
+
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Liste des voitures disponibles
@@ -89,7 +94,7 @@ export default function AllCars() {
           </button>
         </div>
 
-       
+
         {isOpen && (
           <form
             onSubmit={handleSubmit}
@@ -132,7 +137,7 @@ export default function AllCars() {
                 <option value="essence">essence</option>
                 <option value="diesel">diesel</option>
                 <option value="hybride">hybride</option>
-              
+
               </select>
               <input
                 type="text"
@@ -194,12 +199,15 @@ export default function AllCars() {
           </form>
         )}
 
-       
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {cars.map((car, index) => (
             <div
-              key={index}
+
               className="bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden hover:scale-[1.02] transition-transform"
+              key={car._id || car._id || index}
+              onClick={() => navigate(`/admin/CarDetail/${car._id}`)}
+
             >
               <img
                 src={car.imageUrl}
@@ -217,9 +225,8 @@ export default function AllCars() {
                   {car.prixParJour} DA / jour
                 </p>
                 <p
-                  className={`mt-1 font-semibold ${
-                    car.disponible ? "text-green-600" : "text-red-500"
-                  }`}
+                  className={`mt-1 font-semibold ${car.disponible ? "text-green-600" : "text-red-500"
+                    }`}
                 >
                   {car.disponible ? "Disponible" : "Non disponible"}
                 </p>
