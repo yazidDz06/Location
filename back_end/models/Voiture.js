@@ -6,7 +6,7 @@ const voitureSchema = new Schema({
   marque: { type: String, required: true },
   modele: { type: String, required: true },
   annee: { type: Number, required: true, min: 1900, max: new Date().getFullYear() },
-  type: { type: String, enum: ['diesel', 'essence', 'electrique'], required: true },
+  type: { type: String, enum: ['diesel', 'essence', 'hybride'], required: true },
   immatriculation: { type: String, unique: true, required: true },
   prixParJour: { type: Number, required: true },
   disponible: { type: Boolean, default: true },

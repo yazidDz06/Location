@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { useFetchData, usePostData } from "@/utils/api";
 import type { Voiture } from "../CarsDetail";
 import { useNavigate } from "react-router-dom";
-import { useParams } from "react-router-dom";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function AllCars() {
 
 
-  const { id } = useParams<{ id: string }>();
+ 
 
   const navigate = useNavigate();
   const { data: carsData, loading, error } = useFetchData<Voiture[]>(`${API_URL}/voitures`);

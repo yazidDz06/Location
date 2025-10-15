@@ -43,10 +43,10 @@ export default function Navbar() {
 
         {/* Liens Desktop */}
         <div className="hidden md:flex space-x-14 items-center">
-          <a href="#about" className="hover:text-blue-500 font-semibold py-2">
+          <a href="#howItWorks" className="hover:text-blue-500 font-semibold py-2">
             Comment ça marche
           </a>
-          <a href="#services" className="hover:text-blue-500 font-semibold py-2">
+          <a href="#whyChooseUs" className="hover:text-blue-500 font-semibold py-2">
             Pourquoi nous choisir
           </a>
           <a href="#contact" className="hover:text-blue-500 font-semibold py-2">

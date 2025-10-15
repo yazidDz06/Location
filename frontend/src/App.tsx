@@ -11,6 +11,7 @@ import VoitureDetail from "./pages/CarsDetail";
 import CarUpdate from "./pages/Admin/CarsUpdate";
 import AllCars from "./pages/Admin/AllCarsGetCreate";
 import CarDetailAdmin from "./pages/Admin/CarDetailAdmin";
+import ReservationForm from "./pages/Formulaire";
 export default function App() {
 
 
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/admin/cars" element={<AllCars />} />
           <Route path="/admin/cars/:id" element={<CarUpdate />} />
           <Route path="/admin/CarDetail/:id" element={<CarDetailAdmin />} />
+           <Route path="/reservation/:id" element={<ReservationForm />} />
 
         </Routes>
       </ThemeProvider>

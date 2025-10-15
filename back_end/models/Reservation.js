@@ -22,7 +22,7 @@ const reservationSchema = new Schema({
   prixTotal: { type: Number, required: true },
   statut: { 
     type: String, 
-    enum: ["en_attente", "confirmee", "terminee", "annulee"], 
+    enum: ["en_attente", "confirmée", "terminée", "annulée"], 
     default: "en_attente"
   }
 }, { timestamps: true });
