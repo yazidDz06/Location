@@ -44,7 +44,7 @@ export default function LoginAdmin() {
     if (response && response.message === "Connexion réussie") {
       setSuccess("Connexion réussie !");
       // Redirige directement après succès
-      navigate("/admin/cars");
+      navigate("/dashboardAdmin");
     }
   };
 

@@ -126,10 +126,10 @@ router.get("/profile", authMiddleware, (req, res) => {
 });
 
 //get all users (admin only)
-router.get("/", authMiddleware,adminMiddleware,async (req, res) => {
+router.get("/All", authMiddleware,adminMiddleware,async (req, res) => {
   try {
     const users = await User.find().select("-password");
-    res.json({ users });
+    res.json( users );
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Erreur serveur" });

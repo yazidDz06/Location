@@ -11,14 +11,14 @@ interface Adresse {
   rue: string;
 }
 
-interface Reservation {
+export interface Reservation {
   voiture: string; 
   dateDebut: string;
   dateFin: string;
   adresse: Adresse;
 }
 
-interface ReservationResponse {
+export interface ReservationResponse {
   message: string;
   prixTotal: number;
   jours: number;

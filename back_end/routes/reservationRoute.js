@@ -63,6 +63,18 @@ const clientExist = await User.findById(client);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 });
+router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const reservations = await Reservation.find()
+      .populate("client", "nom prenom email") // afficher les infos principales du client
+      .populate("voiture", "marque modele prixParJour"); // de la voiture
+
+    res.status(200).json(reservations);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
+  }
+});
 
 module.exports = router;
 

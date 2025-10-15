@@ -96,3 +96,12 @@ export function useSendData<T, R = any>(url: string, method: "PUT" | "DELETE") {
 
   return { sendData, data, loading, error };
 }
+//interface users 
+export interface Users{
+  _id: string,
+  nom : string,
+  prenom: string,
+  numero: string,
+  dateNaissance: string
+}
+
