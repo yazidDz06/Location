@@ -13,6 +13,7 @@ import AllCars from "./pages/Admin/AllCarsGetCreate";
 import CarDetailAdmin from "./pages/Admin/CarDetailAdmin";
 import ReservationForm from "./pages/Formulaire";
 import Dashboard from "./pages/Admin/Dashboard";
+
 export default function App() {
 
 
@@ -20,6 +21,7 @@ export default function App() {
 
     <BrowserRouter>
       <ThemeProvider defaultTheme="system">
+        
         <ToastContainer position="top-right" autoClose={3000} theme="colored" />
         <Routes>
           <Route path="/" element={<Home />} />
@@ -34,6 +36,7 @@ export default function App() {
            <Route path="/reservation/:id" element={<ReservationForm />} />
           <Route path="/dashboardAdmin" element={<Dashboard />} />
         </Routes>
+        
       </ThemeProvider>
     </BrowserRouter>
 

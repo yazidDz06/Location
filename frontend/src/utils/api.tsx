@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import type { User } from "@/components/Navbar";
 
 export function useFetchData<T>(url: string) {
   const [data, setData] = useState<T | null>(null);
@@ -97,10 +97,8 @@ export function useSendData<T, R = any>(url: string, method: "PUT" | "DELETE") {
   return { sendData, data, loading, error };
 }
 //interface users 
-export interface Users{
+export interface Users extends User{
   _id: string,
-  nom : string,
-  prenom: string,
   numero: string,
   dateNaissance: string
 }

@@ -1,21 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "./themeProvider";
 import { FaSun, FaMoon } from "react-icons/fa";
 import { FiMenu, FiX } from "react-icons/fi";
 import logo from "../assets/log.svg";
 import { useNavigate } from "react-router-dom";
 import { useFetchData } from "@/utils/api";
+import { useUserStore } from "./AuthStore";
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+export interface User {
+  nom: string;
+  prenom: string;
+}
+
 export default function Navbar() {
   const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  interface User {
-    nom: string,
-    prenom: string
-  }
-  const { data: user, loading, error } = useFetchData<User>(`${API_URL}/users/profile`);
-  if (loading) return <p className="text-center mt-10">Chargement...</p>;
+  const { user, setUser, clearUser } = useUserStore();
+  const { data, loading } = useFetchData<User>(`${API_URL}/users/profile`);
+
+  useEffect(() => {
+    if (data) {
+      setUser(data);
+    } else if (!loading) {
+      clearUser(); // attention aux parenthèses ✅
+    }
+  }, [data, loading, setUser, clearUser]);
 
   const handleLogout = async () => {
     try {
@@ -23,11 +35,13 @@ export default function Navbar() {
         method: "POST",
         credentials: "include",
       });
-     navigate("/")
+      clearUser(); // vide Zustand
+      navigate("/"); // redirige ensuite
     } catch (err) {
       console.error("Erreur de déconnexion :", err);
     }
   };
+
   return (
     <nav
       className={`w-full h-18 relative z-[100] top-0 left-0 px-8  ${theme === "dark" ? "bg-gray-900 text-white" : "bg-white text-black"
