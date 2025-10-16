@@ -100,7 +100,7 @@ export default function Dashboard() {
         {/* Réservations */}
         <div
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 text-center cursor-pointer hover:scale-105 transition-transform"
-          onClick={() => navigate("/admin/reservations")}
+          onClick={() => navigate("/resAdmin")}
         >
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
             Réservations totales

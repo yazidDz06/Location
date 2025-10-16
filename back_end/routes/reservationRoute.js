@@ -75,6 +75,54 @@ router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 });
+//  Mettre à jour le statut d'une réservation
+router.patch("/:id", async (req, res) => {
+  try {
+    const { statut } = req.body;
+    if (!statut)
+      return res.status(400).json({ message: "Le statut est requis." });
+
+    //  populate la voiture pour accéder à son champ disponible
+    const reservation = await Reservation.findById(req.params.id).populate("voiture");
+    if (!reservation)
+      return res.status(404).json({ message: "Réservation introuvable." });
+
+    
+    reservation.statut = statut;
+    await reservation.save();
+
+    if (statut === "terminée" && reservation.voiture) {
+      reservation.voiture.disponible = true;
+      await reservation.voiture.save();
+    }
+
+    res.status(200).json({
+      message: `Statut mis à jour en '${statut}'.`,
+      reservation,
+    });
+  } catch (error) {
+    console.error("Erreur  :", error);
+    res.status(500).json({ message: "Erreur serveur.", error });
+  }
+});
+
+
+//  Supprimer une réservation (lorsqu’elle est terminée)
+router.delete("/:id", async (req, res) => {
+  try {
+    const reservation = await Reservation.findById(req.params.id);
+    if (!reservation)
+      return res.status(404).json({ message: "Réservation introuvable." });
+
+    await reservation.deleteOne();
+
+    res.status(200).json({ message: "Réservation supprimée avec succès." });
+  } catch (error) {
+    console.error("Erreur de suppression", error);
+    res.status(500).json({ message: "Erreur serveur.", error });
+  }
+});
+
 
 module.exports = router;
 

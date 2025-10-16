@@ -60,7 +60,7 @@ export default function CarDetailAdmin() {
             <p>Année : {voiture.annee}</p>
             <p>Type : {voiture.type}</p>
             <p>Kilométrage : {voiture.kilometrage} km</p>
-            <p>Prix par jour : {voiture.prixParJour} €</p>
+            <p>Prix par jour : {voiture.prixParJour} DA</p>
             <p>Matricule : {voiture.immatriculation}</p>
             <p>Énergie : {voiture.type}</p>
             <p
