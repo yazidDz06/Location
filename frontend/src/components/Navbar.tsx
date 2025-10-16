@@ -25,7 +25,7 @@ export default function Navbar() {
     if (data) {
       setUser(data);
     } else if (!loading) {
-      clearUser(); // attention aux parenthèses ✅
+      clearUser(); 
     }
   }, [data, loading, setUser, clearUser]);
 
