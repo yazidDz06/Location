@@ -1,29 +1,48 @@
-const express = require("express");
 const mongoose = require("mongoose");
-require("dotenv").config();
+
+// Charge et valide la configuration en premier : si un secret manque, le
+// processus s'arrête ici plutôt que de servir une application non sécurisée.
+const env = require("./config/env");
 const connectDB = require("./db");
-const app = express();
-const PORT = process.env.PORT || 5000; 
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
-app.use(cors({
-  origin: "http://localhost:5173", 
-  credentials: true, 
-}));
+const logger = require("./utils/logger");
+const creerApp = require("./app");
 
-app.use(cookieParser());
-app.use(express.json());
+let serveur;
 
-const voitureRoutes = require("./routes/voitureRoute");
-const userRoutes = require("./routes/userRoute");
-const ReservationRoute = require("./routes/reservationRoute");
+(async function demarrer() {
+  await connectDB();
 
-connectDB();
+  const app = creerApp();
+  serveur = app.listen(env.PORT, () => {
+    logger.info(`Serveur démarré sur le port ${env.PORT}`, {
+      environnement: env.NODE_ENV,
+    });
+  });
+})();
 
-app.use("/voitures", voitureRoutes);
-app.use("/users",userRoutes);
-app.use("/appointments",ReservationRoute);
+/**
+ * Arrêt propre : on laisse les requêtes en cours se terminer et on ferme la
+ * connexion MongoDB, plutôt que de couper au milieu d'une écriture.
+ */
+async function arreterProprement(signal) {
+  logger.info(`Signal ${signal} reçu, arrêt en cours...`);
 
-app.listen(PORT, () => {
-  console.log(` Server running on port ${PORT}`);
+  serveur?.close(async () => {
+    await mongoose.connection.close(false);
+    logger.info("Arrêt terminé");
+    process.exit(0);
+  });
+
+  // Filet de sécurité si une connexion refuse de se fermer.
+  setTimeout(() => process.exit(1), 10000).unref();
+}
+
+process.on("SIGTERM", () => arreterProprement("SIGTERM"));
+process.on("SIGINT", () => arreterProprement("SIGINT"));
+
+// Un rejet non géré laisse le processus dans un état indéterminé : on le
+// journalise et on redémarre proprement plutôt que de continuer à l'aveugle.
+process.on("unhandledRejection", (raison) => {
+  logger.erreur("Rejet de promesse non géré", { raison: String(raison) });
+  arreterProprement("unhandledRejection");
 });

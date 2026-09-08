@@ -1,128 +1,225 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useFetchData } from "@/utils/api";
-import { useEffect, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft,
+  Calendar,
+  Gauge,
+  Fuel,
+  ShieldCheck,
+  Truck,
+  Headphones,
+} from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/ui/Footer";
+import {
+  Bouton,
+  Carte,
+  Chargement,
+  EtatVide,
+  Etiquette,
+} from "@/components/ui/primitives";
+import { useRequete, formaterPrix, formaterDate } from "@/lib/hooks";
+import { useAuth } from "@/store/auth";
+import type { Voiture, Periode } from "@/lib/types";
 
-type Energie = "diesel" | "essence" | "hybride";
-
-export interface Voiture {
-  _id?: string;
-  marque: string;
-  modele: string;
-  annee: number;
-  type: Energie;
-  immatriculation: string;
-  prixParJour: number;
-  disponible: boolean;
-  kilometrage: number;
-  imageUrl: string;
-}
-
-interface User {
-  _id: string;
-  nom: string;
-  prenom: string;
-  email: string;
-}
+const GARANTIES = [
+  { icone: ShieldCheck, texte: "Assurance tous risques incluse" },
+  { icone: Truck, texte: "Livraison à votre adresse sous 24 h" },
+  { icone: Headphones, texte: "Assistance routière 24/7" },
+];
 
 export default function VoitureDetail() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { utilisateur } = useAuth();
 
-  //état pour l'utilisateur connecté
-  const [user, setUser] = useState<User | null>(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  // Vérifier si l'utilisateur est authentifié 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch(`${API_URL}/users/profile`, {
-          credentials: "include", 
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user || data);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Erreur auth:", error);
-        setUser(null);
-      } finally {
-        setCheckingAuth(false);
-      }
-    };
-    checkAuth();
-  }, []);
-
- 
-  const { data: voiture, loading, error } = useFetchData<Voiture>(
-    id ? `${API_URL}/voitures/${id}` : ""
+  const { donnees: voiture, chargement, erreur } = useRequete<Voiture>(
+    id ? `/voitures/${id}` : null
+  );
+  const { donnees: indisponibilites } = useRequete<Periode[]>(
+    id ? `/voitures/${id}/indisponibilites` : null
   );
 
-  if (loading || checkingAuth)
-    return <p className="text-center mt-10">Chargement...</p>;
-  if (error)
-    return (
-      <p className="text-center text-red-500 mt-10">
-        Erreur : {error.toString()}
-      </p>
-    );
-  if (!voiture)
-    return <p className="text-center mt-10">Aucune voiture trouvée.</p>;
-
- 
-  const handleReservation = () => {
-    if (!user) {
-      navigate("/login"); 
-    } else {
-      navigate(`/reservation/${voiture._id}`);
+  const reserver = () => {
+    // Un visiteur non connecté est envoyé vers la connexion, avec mémorisation
+    // de la page voulue pour y revenir juste après.
+    if (!utilisateur) {
+      navigate("/login", { state: { depuis: `/reservation/${id}` } });
+      return;
     }
+    navigate(`/reservation/${id}`);
   };
 
-  return (
-    <div className="flex-grow container mx-auto px-6 py-10 bg-gray-100 dark:bg-gray-800 min-h-screen">
-      <h1 className="text-2xl font-semibold text-center mb-8">
-        Détails de la voiture
-      </h1>
-
-      <div className="flex justify-center">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden max-w-md">
-          <img
-            src={voiture.imageUrl}
-            alt={`${voiture.marque} ${voiture.modele}`}
-            className="w-full h-64 object-cover"
-          />
-          <div className="p-6 space-y-2">
-            <h2 className="text-xl font-bold mb-2">
-              {voiture.marque} {voiture.modele}
-            </h2>
-            <p>Année : {voiture.annee}</p>
-            <p>Type : {voiture.type}</p>
-            <p>Kilométrage : {voiture.kilometrage} km</p>
-            <p>Prix par jour : {voiture.prixParJour} DA</p>
-            <p
-              className={`font-semibold mt-3 ${
-                voiture.disponible ? "text-green-600" : "text-red-500"
-              }`}
-            >
-              {voiture.disponible ? "Disponible" : "Non disponible"}
-            </p>
-
-            {/* 🔘 Bouton Réserver */}
-            {voiture.disponible && (
-              <button
-                onClick={handleReservation}
-                className="w-full mt-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold transition duration-300"
-              >
-                Réserver
-              </button>
-            )}
-          </div>
-        </div>
+  if (chargement) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <Chargement message="Chargement du véhicule…" />
       </div>
+    );
+  }
+
+  if (erreur || !voiture) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <EtatVide
+          titre="Véhicule introuvable"
+          description={erreur ?? "Ce véhicule n'existe plus ou a été retiré."}
+          action={<Bouton onClick={() => navigate("/voitures")}>Voir la flotte</Bouton>}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      <main className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+        <Link
+          to="/voitures"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--or)]"
+        >
+          <ArrowLeft className="size-4" />
+          Retour à la flotte
+        </Link>
+
+        <div className="mt-8 grid gap-10 lg:grid-cols-[1.35fr_1fr]">
+          {/* ── Visuel ── */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-6"
+          >
+            <div className="relative overflow-hidden rounded-3xl border border-border bg-muted ombre-portee">
+              {voiture.imageUrl ? (
+                <img
+                  src={voiture.imageUrl}
+                  alt={`${voiture.marque} ${voiture.modele}`}
+                  className="aspect-16/10 w-full object-cover"
+                />
+              ) : (
+                <div className="grid aspect-16/10 w-full place-items-center text-muted-foreground">
+                  Photo à venir
+                </div>
+              )}
+
+              <div className="absolute left-5 top-5">
+                <Etiquette ton={voiture.disponible ? "succes" : "danger"}>
+                  {voiture.disponible ? "Disponible maintenant" : "Actuellement louée"}
+                </Etiquette>
+              </div>
+            </div>
+
+            {/* Caractéristiques */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                { icone: Calendar, libelle: "Année", valeur: String(voiture.annee) },
+                {
+                  icone: Gauge,
+                  libelle: "Kilométrage",
+                  valeur: `${formaterPrix(voiture.kilometrage)} km`,
+                },
+                { icone: Fuel, libelle: "Motorisation", valeur: voiture.type },
+              ].map((carac) => (
+                <Carte key={carac.libelle} className="p-5">
+                  <carac.icone className="mb-3 size-5 text-[var(--or)]" />
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {carac.libelle}
+                  </p>
+                  <p className="mt-1 capitalize">{carac.valeur}</p>
+                </Carte>
+              ))}
+            </div>
+
+            {/* Périodes déjà prises */}
+            {indisponibilites && indisponibilites.length > 0 && (
+              <Carte className="p-6">
+                <h2 className="mb-4 text-lg">Périodes déjà réservées</h2>
+                <ul className="flex flex-wrap gap-2">
+                  {indisponibilites.map((periode, i) => (
+                    <li key={i}>
+                      <Etiquette ton="attention">
+                        {formaterDate(periode.dateDebut)} →{" "}
+                        {formaterDate(periode.dateFin)}
+                      </Etiquette>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Choisissez des dates en dehors de ces périodes.
+                </p>
+              </Carte>
+            )}
+          </motion.div>
+
+          {/* ── Panneau de réservation ── */}
+          <motion.aside
+            initial={{ opacity: 0, y: 26 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+            className="lg:sticky lg:top-28 lg:self-start"
+          >
+            <Carte className="filet-or overflow-hidden">
+              <div className="space-y-6 p-7">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--or)]">
+                    {voiture.marque}
+                  </p>
+                  <h1 className="mt-2 text-3xl interligne-titre">
+                    {voiture.modele}
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Immatriculation {voiture.immatriculation}
+                  </p>
+                </div>
+
+                <div className="flex items-baseline gap-2 border-y border-border-subtile py-5">
+                  <span className="font-display text-4xl text-[var(--or)]">
+                    {formaterPrix(voiture.prixParJour)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">DA / jour</span>
+                </div>
+
+                <ul className="space-y-3">
+                  {GARANTIES.map((g) => (
+                    <li
+                      key={g.texte}
+                      className="flex items-center gap-3 text-sm text-muted-foreground"
+                    >
+                      <g.icone className="size-4 shrink-0 text-[var(--or)]" />
+                      {g.texte}
+                    </li>
+                  ))}
+                </ul>
+
+                <Bouton
+                  taille="lg"
+                  className="w-full"
+                  onClick={reserver}
+                  disabled={!voiture.disponible}
+                  variante={voiture.disponible ? "or" : "contour"}
+                >
+                  {voiture.disponible
+                    ? "Réserver ce véhicule"
+                    : "Indisponible actuellement"}
+                </Bouton>
+
+                {!utilisateur && voiture.disponible && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Un compte est nécessaire pour réserver.
+                  </p>
+                )}
+              </div>
+            </Carte>
+          </motion.aside>
+        </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }

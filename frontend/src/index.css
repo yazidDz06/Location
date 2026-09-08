@@ -3,17 +3,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ══════════════════════════════════════════════════════════════════════════
+   SYSTÈME DE DESIGN — « Obsidienne & Or »
+   Une location de véhicules haut de gamme : fond nuit profonde, or chaud en
+   accent, verre dépoli et typographie éditoriale. Chaque valeur est un jeton
+   pour que le thème se change en un endroit.
+   ══════════════════════════════════════════════════════════════════════════ */
+
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevee: var(--surface-elevee);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -22,99 +25,300 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-or: var(--or);
+  --color-or-clair: var(--or-clair);
+  --color-or-sombre: var(--or-sombre);
   --color-destructive: var(--destructive);
+  --color-succes: var(--succes);
+  --color-attention: var(--attention);
   --color-border: var(--border);
+  --color-border-subtile: var(--border-subtile);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-display: "Playfair Display", "Georgia", serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
 }
+
+/* ─────────────────────────── Thème clair (ivoire) ───────────────────────── */
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --radius: 1rem;
+
+  --background: oklch(0.985 0.006 85);
+  --foreground: oklch(0.19 0.014 60);
+
+  --surface: oklch(1 0 0);
+  --surface-elevee: oklch(0.995 0.004 85);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --card-foreground: oklch(0.19 0.014 60);
+
+  --primary: oklch(0.22 0.02 60);
+  --primary-foreground: oklch(0.98 0.01 85);
+
+  --secondary: oklch(0.955 0.012 85);
+  --secondary-foreground: oklch(0.26 0.02 60);
+
+  --muted: oklch(0.955 0.01 85);
+  --muted-foreground: oklch(0.5 0.018 60);
+
+  --accent: oklch(0.955 0.02 85);
+  --accent-foreground: oklch(0.26 0.02 60);
+
+  /* L'or : signature de la marque, réservé aux accents et aux actions clés. */
+  --or: oklch(0.72 0.13 78);
+  --or-clair: oklch(0.84 0.1 85);
+  --or-sombre: oklch(0.58 0.12 72);
+
+  --destructive: oklch(0.58 0.21 25);
+  --succes: oklch(0.62 0.14 155);
+  --attention: oklch(0.75 0.15 75);
+
+  --border: oklch(0.9 0.012 80);
+  --border-subtile: oklch(0.94 0.008 80);
+  --input: oklch(0.93 0.01 80);
+  --ring: oklch(0.72 0.13 78);
+
+  --ombre-douce: 0 1px 2px oklch(0.2 0.02 60 / 0.04),
+    0 8px 24px oklch(0.2 0.02 60 / 0.06);
+  --ombre-portee: 0 2px 4px oklch(0.2 0.02 60 / 0.05),
+    0 24px 48px -12px oklch(0.2 0.02 60 / 0.14);
+  --ombre-or: 0 8px 32px oklch(0.72 0.13 78 / 0.28);
 }
 
+/* ──────────────────────── Thème sombre (obsidienne) ─────────────────────── */
+
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.145 0.012 60);
+  --foreground: oklch(0.96 0.008 85);
+
+  --surface: oklch(0.185 0.014 60);
+  --surface-elevee: oklch(0.225 0.016 62);
+
+  --card: oklch(0.195 0.014 60);
+  --card-foreground: oklch(0.96 0.008 85);
+
+  --primary: oklch(0.93 0.02 85);
+  --primary-foreground: oklch(0.17 0.014 60);
+
+  --secondary: oklch(0.26 0.016 62);
+  --secondary-foreground: oklch(0.94 0.01 85);
+
+  --muted: oklch(0.26 0.014 60);
+  --muted-foreground: oklch(0.7 0.016 75);
+
+  --accent: oklch(0.28 0.02 65);
+  --accent-foreground: oklch(0.95 0.012 85);
+
+  --or: oklch(0.78 0.13 80);
+  --or-clair: oklch(0.88 0.09 86);
+  --or-sombre: oklch(0.64 0.12 74);
+
+  --destructive: oklch(0.65 0.19 25);
+  --succes: oklch(0.7 0.14 155);
+  --attention: oklch(0.8 0.14 78);
+
+  --border: oklch(1 0 0 / 9%);
+  --border-subtile: oklch(1 0 0 / 5%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.78 0.13 80);
+
+  --ombre-douce: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px oklch(0 0 0 / 0.35);
+  --ombre-portee: 0 2px 4px oklch(0 0 0 / 0.3),
+    0 24px 48px -12px oklch(0 0 0 / 0.55);
+  --ombre-or: 0 8px 32px oklch(0.78 0.13 80 / 0.3);
 }
+
+/* ═══════════════════════════════ Base ═══════════════════════════════════ */
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.022em;
+    font-weight: 600;
+  }
+
+  /* Un anneau de focus visible est une exigence d'accessibilité : sans lui,
+     la navigation au clavier devient impraticable. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--or);
+    color: oklch(0.17 0.014 60);
+  }
+
+  /* Barre de défilement discrète, accordée au thème. */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 99px;
+    border: 3px solid var(--background);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+}
+
+/* ═════════════════════════════ Utilitaires ══════════════════════════════ */
+
+@layer utilities {
+  /* Texte en dégradé doré — réservé aux titres, jamais au corps de texte. */
+  .texte-or {
+    background-image: linear-gradient(
+      100deg,
+      var(--or-sombre) 0%,
+      var(--or) 35%,
+      var(--or-clair) 55%,
+      var(--or) 75%,
+      var(--or-sombre) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: chatoiement 6s linear infinite;
+  }
+
+  /* Verre dépoli : la carte laisse deviner l'arrière-plan sans le brouiller. */
+  .verre {
+    background: color-mix(in oklch, var(--surface) 72%, transparent);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    border: 1px solid var(--border);
+  }
+
+  .verre-fonce {
+    background: color-mix(in oklch, var(--background) 78%, transparent);
+    backdrop-filter: blur(24px) saturate(1.8);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    border: 1px solid var(--border-subtile);
+  }
+
+  .ombre-douce { box-shadow: var(--ombre-douce); }
+  .ombre-portee { box-shadow: var(--ombre-portee); }
+  .ombre-or { box-shadow: var(--ombre-or); }
+
+  /* Liseré doré en haut d'une carte : détail « premium » peu coûteux. */
+  .filet-or {
+    position: relative;
+  }
+  .filet-or::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--or) 30%,
+      var(--or-clair) 50%,
+      var(--or) 70%,
+      transparent
+    );
+    opacity: 0.55;
+  }
+
+  .grain {
+    position: relative;
+  }
+  /* Léger grain : casse l'aspect « plat » des aplats sombres. */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.028;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .halo-or {
+    position: relative;
+  }
+  .halo-or::before {
+    content: "";
+    position: absolute;
+    inset: -30%;
+    background: radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklch, var(--or) 22%, transparent),
+      transparent 62%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .transition-douce {
+    transition:
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.3s ease,
+      background-color 0.3s ease,
+      opacity 0.3s ease;
+  }
+
+  .interligne-titre { line-height: 1.05; }
+
+  /* Masque de dégradé pour fondre le bas d'une image dans la page. */
+  .fondu-bas {
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+  }
+}
+
+@keyframes chatoiement {
+  to { background-position: 200% center; }
+}
+
+@keyframes montee {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animer-montee {
+  animation: montee 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pulsation-douce {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.pulsation { animation: pulsation-douce 2.4s ease-in-out infinite; }
+
+/* Respect des préférences système : pas d'animation pour qui n'en veut pas. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

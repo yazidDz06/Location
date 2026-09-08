@@ -1,240 +1,348 @@
-import { useState, useEffect } from "react";
-import { useFetchData, usePostData } from "@/utils/api";
-import type { Voiture } from "../CarsDetail";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
+import { Plus, X, Pencil, Trash2 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import LayoutAdmin from "./LayoutAdmin";
+import {
+  Bouton,
+  Carte,
+  Champ,
+  Chargement,
+  EtatVide,
+  Etiquette,
+} from "@/components/ui/primitives";
+import { api, ApiError } from "@/lib/api";
+import { useRequete, formaterPrix } from "@/lib/hooks";
+import type { Voiture, Motorisation } from "@/lib/types";
+
+const MOTORISATIONS: Motorisation[] = ["essence", "diesel", "hybride", "electrique"];
+
+const FORMULAIRE_VIDE = {
+  marque: "",
+  modele: "",
+  annee: String(new Date().getFullYear()),
+  type: "essence" as Motorisation,
+  immatriculation: "",
+  prixParJour: "",
+  kilometrage: "0",
+  imageUrl: "",
+};
 
 export default function AllCars() {
-
-
- 
-
   const navigate = useNavigate();
-  const { data: carsData, loading, error } = useFetchData<Voiture[]>(`${API_URL}/voitures`);
-  const { postData, loading: posting, error: postError } = usePostData<Voiture, Voiture>(`${API_URL}/voitures`);
+  const { donnees: voitures, chargement, erreur, recharger } =
+    useRequete<Voiture[]>("/voitures");
 
-  const [cars, setCars] = useState<Voiture[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [panneauOuvert, setPanneauOuvert] = useState(false);
+  const [formulaire, setFormulaire] = useState(FORMULAIRE_VIDE);
+  const [erreurs, setErreurs] = useState<Record<string, string>>({});
+  const [envoi, setEnvoi] = useState(false);
+  const [suppressionEnCours, setSuppressionEnCours] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (carsData) setCars(carsData);
-  }, [carsData]);
-
-
-  const [formData, setFormData] = useState<Voiture>({
-    marque: "",
-    modele: "",
-    annee: 2020,
-    type: "essence",
-    immatriculation: "",
-    prixParJour: 0,
-    disponible: true,
-    kilometrage: 0,
-    imageUrl: "",
-  });
-
-  //  Gestion des changements généraux
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const target = e.target as HTMLInputElement;
-    const { name, value, type } = target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? target.checked : value,
-    });
+  const changer = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormulaire((prec) => ({ ...prec, [name]: value }));
+    setErreurs((prec) => ({ ...prec, [name]: "" }));
   };
 
-  //  Soumission du formulaire
-  const handleSubmit = async (e: React.FormEvent) => {
+  const valider = () => {
+    const nouvelles: Record<string, string> = {};
+    if (!formulaire.marque.trim()) nouvelles.marque = "Marque requise";
+    if (!formulaire.modele.trim()) nouvelles.modele = "Modèle requis";
+    if (!/^[A-Za-z0-9-]{4,20}$/.test(formulaire.immatriculation.trim()))
+      nouvelles.immatriculation = "Format attendu : lettres, chiffres et tirets";
+    if (Number(formulaire.prixParJour) <= 0)
+      nouvelles.prixParJour = "Le prix doit être positif";
+    if (
+      formulaire.imageUrl &&
+      !/^https?:\/\//i.test(formulaire.imageUrl.trim())
+    )
+      nouvelles.imageUrl = "L'URL doit commencer par http:// ou https://";
+
+    setErreurs(nouvelles);
+    return Object.keys(nouvelles).length === 0;
+  };
+
+  const soumettre = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!valider()) return;
 
-    // Conversion manuelle des champs numériques
-    const carToSend = {
-      ...formData,
-      annee: Number(formData.annee),
-      prixParJour: Number(formData.prixParJour),
-      kilometrage: Number(formData.kilometrage),
-    };
-
-    const newCar = await postData(carToSend);
-
-    if (newCar) {
-      setCars((prev) => [...prev, newCar]);
-      setFormData({
-        marque: "",
-        modele: "",
-        annee: 2020,
-        type: "essence",
-        immatriculation: "",
-        prixParJour: 0,
-        disponible: true,
-        kilometrage: 0,
-        imageUrl: "",
+    setEnvoi(true);
+    try {
+      // Les champs numériques sont convertis : le schéma serveur attend des
+      // nombres, pas les chaînes que produit un <input>.
+      await api.post<Voiture>("/voitures", {
+        marque: formulaire.marque.trim(),
+        modele: formulaire.modele.trim(),
+        annee: Number(formulaire.annee),
+        type: formulaire.type,
+        immatriculation: formulaire.immatriculation.trim().toUpperCase(),
+        prixParJour: Number(formulaire.prixParJour),
+        kilometrage: Number(formulaire.kilometrage),
+        ...(formulaire.imageUrl.trim()
+          ? { imageUrl: formulaire.imageUrl.trim() }
+          : {}),
       });
-      setIsOpen(false);
+
+      toast.success("Véhicule ajouté au catalogue");
+      setFormulaire(FORMULAIRE_VIDE);
+      setPanneauOuvert(false);
+      recharger();
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.messageComplet : "Ajout impossible";
+      setErreurs({ global: message });
+      toast.error(message);
+    } finally {
+      setEnvoi(false);
     }
   };
 
-  if (loading) return <p className="text-center mt-10">Chargement...</p>;
-  if (error) return <p className="text-center text-red-500 mt-10 font-bold">Erreur : {error}</p>;
+  const supprimer = async (voiture: Voiture) => {
+    if (!confirm(`Supprimer ${voiture.marque} ${voiture.modele} ?`)) return;
+
+    setSuppressionEnCours(voiture._id);
+    try {
+      await api.delete(`/voitures/${voiture._id}`);
+      toast.success("Véhicule supprimé");
+      recharger();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.messageComplet : "Suppression impossible"
+      );
+    } finally {
+      setSuppressionEnCours(null);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <main className="flex-grow container mx-auto px-6 py-10">
-
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Liste des voitures disponibles
-          </h1>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+    <LayoutAdmin
+      titre="Véhicules"
+      description={`${voitures?.length ?? 0} véhicule(s) au catalogue`}
+      actions={
+        <Bouton onClick={() => setPanneauOuvert((o) => !o)}>
+          {panneauOuvert ? <X className="size-4" /> : <Plus className="size-4" />}
+          {panneauOuvert ? "Fermer" : "Ajouter un véhicule"}
+        </Bouton>
+      }
+    >
+      {/* ── Formulaire d'ajout ── */}
+      <AnimatePresence>
+        {panneauOuvert && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-10 overflow-hidden"
           >
-            {isOpen ? "Fermer" : "Ajouter voiture"}
-          </button>
-        </div>
+            <Carte className="filet-or overflow-hidden">
+              <form onSubmit={soumettre} className="space-y-6 p-7" noValidate>
+                <h2 className="text-xl">Nouveau véhicule</h2>
 
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  <Champ
+                    libelle="Marque"
+                    name="marque"
+                    placeholder="Volkswagen"
+                    value={formulaire.marque}
+                    onChange={changer}
+                    erreur={erreurs.marque}
+                  />
+                  <Champ
+                    libelle="Modèle"
+                    name="modele"
+                    placeholder="Golf 8"
+                    value={formulaire.modele}
+                    onChange={changer}
+                    erreur={erreurs.modele}
+                  />
+                  <Champ
+                    libelle="Immatriculation"
+                    name="immatriculation"
+                    placeholder="1234-ABC-16"
+                    value={formulaire.immatriculation}
+                    onChange={changer}
+                    erreur={erreurs.immatriculation}
+                  />
+                  <Champ
+                    libelle="Année"
+                    name="annee"
+                    type="number"
+                    min={1900}
+                    max={new Date().getFullYear() + 1}
+                    value={formulaire.annee}
+                    onChange={changer}
+                    erreur={erreurs.annee}
+                  />
 
-        {isOpen && (
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input
-                type="text"
-                name="marque"
-                placeholder="Marque"
-                value={formData.marque}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              />
-              <input
-                type="text"
-                name="modele"
-                placeholder="Modèle"
-                value={formData.modele}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              />
-              <input
-                type="number"
-                name="annee"
-                placeholder="Année"
-                value={formData.annee}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              />
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-              >
-                <option value="essence">essence</option>
-                <option value="diesel">diesel</option>
-                <option value="hybride">hybride</option>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="type"
+                      className="block text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground"
+                    >
+                      Motorisation
+                    </label>
+                    <select
+                      id="type"
+                      name="type"
+                      value={formulaire.type}
+                      onChange={changer}
+                      className="h-12 w-full rounded-xl border border-border bg-[var(--surface)] px-4 text-sm capitalize outline-none transition-douce focus:border-[var(--or)]/60 focus:ring-4 focus:ring-[var(--or)]/12"
+                    >
+                      {MOTORISATIONS.map((m) => (
+                        <option key={m} value={m} className="capitalize">
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              </select>
-              <input
-                type="text"
-                name="immatriculation"
-                placeholder="Immatriculation"
-                value={formData.immatriculation}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              />
-              <input
-                type="number"
-                name="prixParJour"
-                placeholder="Prix par jour"
-                value={formData.prixParJour}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              />
-              <input
-                type="number"
-                name="kilometrage"
-                placeholder="Kilométrage"
-                value={formData.kilometrage}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              />
-              <input
-                type="text"
-                name="imageUrl"
-                placeholder="URL de l'image"
-                value={formData.imageUrl}
-                onChange={handleChange}
-                className="border p-2 rounded w-full"
-                required
-              />
-              <label className="flex items-center space-x-2 mt-2">
-                <input
-                  type="checkbox"
-                  name="disponible"
-                  checked={formData.disponible}
-                  onChange={handleChange}
-                  className="w-4 h-4"
-                />
-                <span className="text-gray-700 dark:text-gray-300">Disponible</span>
-              </label>
-            </div>
+                  <Champ
+                    libelle="Prix / jour (DA)"
+                    name="prixParJour"
+                    type="number"
+                    min={1}
+                    placeholder="4500"
+                    value={formulaire.prixParJour}
+                    onChange={changer}
+                    erreur={erreurs.prixParJour}
+                  />
+                  <Champ
+                    libelle="Kilométrage"
+                    name="kilometrage"
+                    type="number"
+                    min={0}
+                    value={formulaire.kilometrage}
+                    onChange={changer}
+                    erreur={erreurs.kilometrage}
+                  />
 
-            <button
-              type="submit"
-              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg"
-              disabled={posting}
-            >
-              {posting ? "Ajout..." : "Enregistrer"}
-            </button>
+                  <div className="sm:col-span-2">
+                    <Champ
+                      libelle="URL de l'image"
+                      name="imageUrl"
+                      type="url"
+                      placeholder="https://…"
+                      value={formulaire.imageUrl}
+                      onChange={changer}
+                      erreur={erreurs.imageUrl}
+                      indice="Seules les URL http(s) sont acceptées"
+                    />
+                  </div>
+                </div>
 
-            {postError && <p className="text-red-500 mt-2">{postError}</p>}
-          </form>
+                {erreurs.global && (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-[var(--destructive)]/30 bg-[var(--destructive)]/8 px-4 py-3 text-sm text-[var(--destructive)]"
+                  >
+                    {erreurs.global}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Bouton type="submit" chargement={envoi}>
+                    {envoi ? "Ajout…" : "Ajouter au catalogue"}
+                  </Bouton>
+                  <Bouton
+                    type="button"
+                    variante="fantome"
+                    onClick={() => setPanneauOuvert(false)}
+                  >
+                    Annuler
+                  </Bouton>
+                </div>
+              </form>
+            </Carte>
+          </motion.div>
         )}
+      </AnimatePresence>
 
+      {/* ── Liste ── */}
+      {chargement && <Chargement />}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {cars.map((car, index) => (
-            <div
+      {erreur && (
+        <EtatVide
+          titre="Chargement impossible"
+          description={erreur}
+          action={<Bouton onClick={recharger}>Réessayer</Bouton>}
+        />
+      )}
 
-              className="bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden hover:scale-[1.02] transition-transform"
-              key={car._id || car._id || index}
-              onClick={() => navigate(`/admin/CarDetail/${car._id}`)}
+      {!chargement && voitures?.length === 0 && (
+        <EtatVide
+          titre="Catalogue vide"
+          description="Ajoutez votre premier véhicule pour commencer."
+          action={<Bouton onClick={() => setPanneauOuvert(true)}>Ajouter</Bouton>}
+        />
+      )}
 
-            >
-              <img
-                src={car.imageUrl}
-                alt={`${car.marque} ${car.modele}`}
-                className="w-full h-56 object-cover"
-              />
-              <div className="p-4">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {car.marque} {car.modele}
-                </h2>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {car.annee} • {car.type}
-                </p>
-                <p className="text-blue-600 font-semibold dark:text-blue-400 mt-2">
-                  {car.prixParJour} DA / jour
-                </p>
-                <p
-                  className={`mt-1 font-semibold ${car.disponible ? "text-green-600" : "text-red-500"
-                    }`}
-                >
-                  {car.disponible ? "Disponible" : "Non disponible"}
-                </p>
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {voitures?.map((voiture) => (
+          <Carte key={voiture._id} className="overflow-hidden transition-douce hover:border-[var(--or)]/30">
+            <div className="relative aspect-16/10 bg-muted">
+              {voiture.imageUrl ? (
+                <img
+                  src={voiture.imageUrl}
+                  alt={`${voiture.marque} ${voiture.modele}`}
+                  loading="lazy"
+                  className="size-full object-cover"
+                />
+              ) : (
+                <div className="grid size-full place-items-center text-sm text-muted-foreground">
+                  Sans photo
+                </div>
+              )}
+              <div className="absolute left-3 top-3">
+                <Etiquette ton={voiture.disponible ? "succes" : "danger"}>
+                  {voiture.disponible ? "Disponible" : "Indisponible"}
+                </Etiquette>
               </div>
             </div>
-          ))}
-        </div>
-      </main>
-    </div>
+
+            <div className="space-y-4 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate">
+                    {voiture.marque} {voiture.modele}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {voiture.annee} · {voiture.immatriculation}
+                  </p>
+                </div>
+                <p className="shrink-0 font-display text-[var(--or)]">
+                  {formaterPrix(voiture.prixParJour)}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <Bouton
+                  variante="contour"
+                  taille="sm"
+                  className="flex-1"
+                  onClick={() => navigate(`/admin/voitures/${voiture._id}`)}
+                >
+                  <Pencil className="size-3.5" />
+                  Modifier
+                </Bouton>
+                <Bouton
+                  variante="danger"
+                  taille="sm"
+                  chargement={suppressionEnCours === voiture._id}
+                  onClick={() => supprimer(voiture)}
+                >
+                  <Trash2 className="size-3.5" />
+                </Bouton>
+              </div>
+            </div>
+          </Carte>
+        ))}
+      </div>
+    </LayoutAdmin>
   );
 }

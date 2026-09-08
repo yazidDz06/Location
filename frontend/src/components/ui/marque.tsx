@@ -1,66 +1,54 @@
 import { motion } from "framer-motion";
 
+const MARQUES = [
+  "Volkswagen",
+  "Mercedes-Benz",
+  "Audi",
+  "BMW",
+  "Renault",
+  "Peugeot",
+  "Toyota",
+  "Hyundai",
+];
+
+/**
+ * Bandeau de marques défilant en continu.
+ * La liste est dupliquée pour que la translation de -50 % reboucle sans
+ * saut visible.
+ */
 export default function MarquesSection() {
-  const logos = [
-    {
-      
-      src: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Volkswagen_logo_2019.svg/640px-Volkswagen_logo_2019.svg.png",
-    },
-    {
-      
-      src: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Renault_logo_1972-1992.svg/640px-Renault_logo_1972-1992.svg.png",
-    },
-    {
-      
-      src: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Toyota_logo_%28Red%29.svg/640px-Toyota_logo_%28Red%29.svg.png",
-    },
-    {
-      
-      src: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Citroen_2021_%28alternate%29.svg/640px-Citroen_2021_%28alternate%29.svg.png",
-    },
-    {
-     
-      src: "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
-    },
-  ];
+  const boucle = [...MARQUES, ...MARQUES];
 
   return (
-    <section
-      id="marques"
-      className="py-16 px-6 sm:px-10 md:px-20 bg-white dark:bg-gray-900 transition-colors duration-500"
-    >
-      {/* Titre et description */}
-      <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          Nos Marques Partenaires
-        </h2>
-        <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-          Découvrez les marques de voitures les plus fiables et prestigieuses
-          que nous mettons à votre disposition.
-        </p>
-      </div>
+    <section className="border-y border-border-subtile bg-[var(--surface)] py-14">
+      <p className="mb-9 text-center text-xs uppercase tracking-[0.3em] text-muted-foreground">
+        Les constructeurs de notre flotte
+      </p>
 
-      {/* Grille de logos */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-8 items-center justify-center">
-        {logos.map((logo, idx) => (
-          <motion.div
-            key={idx}
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: idx * 0.2, ease: "easeOut" }}
-            viewport={{ once: true }}
-            className="flex flex-col items-center space-y-3"
-          >
-            <img
-              src={logo.src}
-              
-              className="w-20 md:w-24 dark:invert transition-all duration-500"
-            />
-            <p className="text-gray-800 dark:text-gray-300 font-medium">
-              
-            </p>
-          </motion.div>
-        ))}
+      <div
+        className="relative overflow-hidden"
+        // Les bords s'estompent : le défilement paraît infini.
+        style={{
+          maskImage:
+            "linear-gradient(90deg, transparent, black 12%, black 88%, transparent)",
+          WebkitMaskImage:
+            "linear-gradient(90deg, transparent, black 12%, black 88%, transparent)",
+        }}
+      >
+        <motion.div
+          className="flex w-max gap-16 pr-16"
+          animate={{ x: ["0%", "-50%"] }}
+          transition={{ duration: 32, ease: "linear", repeat: Infinity }}
+        >
+          {boucle.map((marque, index) => (
+            <span
+              key={`${marque}-${index}`}
+              className="shrink-0 font-display text-2xl tracking-tight text-muted-foreground/45 transition-colors hover:text-[var(--or)] sm:text-3xl"
+            >
+              {marque}
+            </span>
+          ))}
+        </motion.div>
       </div>
     </section>
   );

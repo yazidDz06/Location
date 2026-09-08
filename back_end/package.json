@@ -2,9 +2,13 @@
   "name": "back_end",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "seed": "node scripts/seed.js",
+    "dev:memoire": "node scripts/devMemoire.js"
   },
   "keywords": [],
   "author": "",
@@ -16,9 +20,16 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
-    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.2",
-    "redis": "^5.8.2"
+    "redis": "^5.8.2",
+    "validator": "^13.15.35",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.2.0",
+    "supertest": "^7.2.2"
   }
 }

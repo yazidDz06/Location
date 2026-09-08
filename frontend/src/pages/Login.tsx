@@ -1,119 +1,156 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import logo from "../assets/voiture.svg";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { ArrowLeft, CarFront } from "lucide-react";
+
+import { useAuth } from "@/store/auth";
+import { ApiError } from "@/lib/api";
+import { Bouton, Champ } from "@/components/ui/primitives";
 
 export default function Login() {
-    const navigate = useNavigate();
-    const apiUrl = import.meta.env.VITE_API;
+  const navigate = useNavigate();
+  const emplacement = useLocation();
+  const { connexion } = useAuth();
 
-    type FormData = {
-        numero: string,
-        password: string
+  const [numero, setNumero] = useState("");
+  const [password, setPassword] = useState("");
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
+
+  const soumettre = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErreur(null);
+    setEnvoi(true);
+
+    try {
+      const utilisateur = await connexion(numero.trim(), password);
+      toast.success(`Bienvenue, ${utilisateur.prenom} !`);
+
+      // Retour à la page demandée avant la redirection vers la connexion.
+      const destination =
+        (emplacement.state as { depuis?: string } | null)?.depuis ??
+        (utilisateur.role === "admin" ? "/admin" : "/voitures");
+      navigate(destination, { replace: true });
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.messageComplet
+          : "Connexion impossible. Vérifiez votre réseau.";
+      setErreur(message);
+      toast.error(message);
+    } finally {
+      setEnvoi(false);
     }
+  };
 
+  return (
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* ── Panneau visuel (bureau) ── */}
+      <aside className="grain relative hidden overflow-hidden bg-[var(--surface)] lg:block">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-32 -left-24 size-[30rem] rounded-full bg-[var(--or)]/12 blur-[110px]"
+        />
+        <div className="relative z-10 flex h-full flex-col justify-between p-14">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-[var(--or-clair)] to-[var(--or-sombre)]">
+              <CarFront className="size-5 text-[oklch(0.17_0.014_60)]" />
+            </span>
+            <span className="font-display text-lg">
+              Prestige<span className="texte-or"> Auto</span>
+            </span>
+          </Link>
 
-    const [formData, setFormData] = useState<FormData>({
-        numero: "",
-        password: "",
-    });
+          <div className="max-w-md space-y-6">
+            <h2 className="interligne-titre text-5xl">
+              Reprenez la route
+              <span className="texte-or italic"> là où vous l'aviez laissée</span>
+            </h2>
+            <p className="leading-relaxed text-muted-foreground">
+              Retrouvez vos réservations, vos véhicules favoris et vos
+              préférences de livraison.
+            </p>
+          </div>
 
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-
-        // Si formData est null, on crée un nouvel objet vide au lieu de l'étendre
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        } as FormData));
-    };
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-
-        if (!formData) {
-            console.error("Les champs ne sont pas remplis !");
-            return;
-        }
-
-        try {
-            const response = await fetch(`${apiUrl}/users/login`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(formData),
-                credentials: "include",
-            });
-
-            if (!response.ok) {
-                console.error("Erreur lors de la connexion");
-                return;
-            }
-
-            const result = await response.json();
-            console.log("Résultat :", result);
-            navigate("/Voitures");
-        } catch (error) {
-            console.error("Erreur de connexion :", error);
-        }
-    };
-
-    return (
-        <div className="flex flex-col justify-center sm:h-screen p-4">
-      <div className="max-w-md w-full mx-auto border border-gray-300 rounded-2xl p-8">
-        <div className="text-center mb-12">
-          <a href="/"><img
-            src={logo} alt="logo" className="w-40 inline-block" />
-          </a>
-          <h1 className="text-blue font-semibold mt-3">Connexion a votre compte</h1>
+          <p className="text-xs tracking-wide text-muted-foreground">
+            © {new Date().getFullYear()} Prestige Auto
+          </p>
         </div>
+      </aside>
 
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            <div>
-              <label className="text-slate-900 text-sm font-medium mb-2 block">Télephone</label>
-              <input name="numero" type="text" 
-              className="text-slate-900 bg-white border border-gray-300 w-full text-sm px-4 py-3 rounded-md outline-blue-500" 
-              placeholder="Entrez votre numéro"
-              value={formData.numero}
-              onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label className="text-slate-900 text-sm font-medium mb-2 block">Password</label>
-              <input name="password" 
-              type="password" 
-               className="text-slate-900 bg-white border border-gray-300 w-full text-sm px-4 py-3 rounded-md outline-blue-500"
-                placeholder="Entrez votre mot de passe"
-                value={formData.password}
-                onChange={handleChange}
-                />
-            </div>
+      {/* ── Formulaire ── */}
+      <main className="flex items-center justify-center px-5 py-12 sm:px-10">
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-md space-y-8"
+        >
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--or)]"
+          >
+            <ArrowLeft className="size-4" />
+            Retour à l'accueil
+          </Link>
 
-
-            <div className="flex items-center">
-              <input id="remember-me" name="remember-me" type="checkbox" 
-              className="h-4 w-4 shrink-0 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
-              <label  className="text-slate-600 ml-3 block text-sm">
-                I accept the <a href="javascript:void(0);"
-                 className="text-blue-600 font-medium hover:underline ml-1">
-                    Terms and Conditions</a>
-              </label>
-            </div>
+          <div className="space-y-2">
+            <h1 className="text-4xl">Connexion</h1>
+            <p className="text-muted-foreground">
+              Heureux de vous revoir parmi nous.
+            </p>
           </div>
 
-          <div className="mt-12">
-            <button type="submit" className="w-full py-3 px-4 text-sm tracking-wider font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none cursor-pointer">
-              Connexion
-            </button>
-          </div>
-          <p className="text-slate-600 text-sm mt-6 text-center">Pas de compte?
-             <a href="/Register" className="text-blue-600 font-medium hover:underline ml-1">
-                Inscrivez vous</a></p>
-        </form>
-      </div>
+          <form onSubmit={soumettre} className="space-y-5" noValidate>
+            <Champ
+              libelle="Numéro de téléphone"
+              name="numero"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              placeholder="0612345678"
+              value={numero}
+              onChange={(e) => setNumero(e.target.value)}
+              required
+            />
+
+            <Champ
+              libelle="Mot de passe"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            {erreur && (
+              <div
+                role="alert"
+                className="rounded-xl border border-[var(--destructive)]/30 bg-[var(--destructive)]/8 px-4 py-3 text-sm text-[var(--destructive)]"
+              >
+                {erreur}
+              </div>
+            )}
+
+            <Bouton type="submit" taille="lg" chargement={envoi} className="w-full">
+              {envoi ? "Connexion…" : "Se connecter"}
+            </Bouton>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Pas encore de compte ?{" "}
+            <Link
+              to="/register"
+              className="font-medium text-[var(--or)] hover:underline"
+            >
+              Inscrivez-vous
+            </Link>
+          </p>
+        </motion.div>
+      </main>
     </div>
-    );
+  );
 }

@@ -1,103 +1,124 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { usePostData } from "@/utils/api";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { ShieldCheck, ArrowLeft } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-interface AdminLogin {
-  numero: string;
-  password: string;
-}
-
-interface LoginResponse {
-  message: string;
-}
+import { useAuth } from "@/store/auth";
+import { ApiError } from "@/lib/api";
+import { Bouton, Carte, Champ } from "@/components/ui/primitives";
 
 export default function LoginAdmin() {
   const navigate = useNavigate();
+  const { connexion, deconnexion } = useAuth();
 
-  const { postData, loading, error } = usePostData<AdminLogin, LoginResponse>(
-    `${API_URL}/users/login`
-  );
+  const [numero, setNumero] = useState("");
+  const [password, setPassword] = useState("");
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
 
-  const [formData, setFormData] = useState<AdminLogin>({
-    numero: "",
-    password: "",
-  });
-
-  const [success, setSuccess] = useState<string | null>(null);
-
-  // 🧩 Gestion des champs
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // 🧭 Soumission du formulaire
-  const handleSubmit = async (e: React.FormEvent) => {
+  const soumettre = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccess(null);
+    setErreur(null);
+    setEnvoi(true);
 
-    const response = await postData(formData);
-    console.log("Réponse backend :", response);
+    try {
+      const utilisateur = await connexion(numero.trim(), password);
 
-    if (response && response.message === "Connexion réussie") {
-      setSuccess("Connexion réussie !");
-      // Redirige directement après succès
-      navigate("/dashboardAdmin");
+      // Le compte est valide mais n'a pas le rôle attendu : on referme la
+      // session ouverte plutôt que de laisser un client connecté ici.
+      if (utilisateur.role !== "admin") {
+        await deconnexion();
+        setErreur("Ce compte ne dispose pas des droits d'administration.");
+        return;
+      }
+
+      toast.success("Bienvenue dans l'espace administrateur");
+      navigate("/admin", { replace: true });
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.messageComplet
+          : "Connexion impossible. Vérifiez votre réseau.";
+      setErreur(message);
+    } finally {
+      setEnvoi(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-6">
-          Connexion administrateur
-        </h1>
+    <div className="grain relative grid min-h-screen place-items-center overflow-hidden px-5 py-12">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 size-[34rem] -translate-x-1/2 rounded-full bg-[var(--or)]/10 blur-[120px]"
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-1">
-              Numéro
-            </label>
-            <input
-              type="text"
-              name="numero"
-              placeholder="Numéro"
-              value={formData.numero}
-              onChange={handleChange}
-              className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
-              required
-            />
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 w-full max-w-md space-y-6"
+      >
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--or)]"
+        >
+          <ArrowLeft className="size-4" />
+          Retour au site
+        </Link>
+
+        <Carte className="filet-or overflow-hidden">
+          <div className="space-y-7 p-8">
+            <div className="space-y-3 text-center">
+              <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--or)]/10 text-[var(--or)]">
+                <ShieldCheck className="size-6" />
+              </span>
+              <h1 className="text-3xl">Espace administrateur</h1>
+              <p className="text-sm text-muted-foreground">
+                Accès réservé à l'équipe de gestion.
+              </p>
+            </div>
+
+            <form onSubmit={soumettre} className="space-y-5" noValidate>
+              <Champ
+                libelle="Numéro de téléphone"
+                name="numero"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="username"
+                placeholder="0700000000"
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                required
+              />
+
+              <Champ
+                libelle="Mot de passe"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+
+              {erreur && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-[var(--destructive)]/30 bg-[var(--destructive)]/8 px-4 py-3 text-sm text-[var(--destructive)]"
+                >
+                  {erreur}
+                </div>
+              )}
+
+              <Bouton type="submit" taille="lg" chargement={envoi} className="w-full">
+                {envoi ? "Connexion…" : "Accéder au tableau de bord"}
+              </Bouton>
+            </form>
           </div>
-
-          <div>
-            <label className="block text-gray-700 dark:text-gray-300 mb-1">
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              name="password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition"
-          >
-            {loading ? "Connexion..." : "Se connecter"}
-          </button>
-        </form>
-
-        {error && <p className="text-red-500 text-center mt-4">{error}</p>}
-        {success && <p className="text-green-600 text-center mt-4">{success}</p>}
-      </div>
+        </Carte>
+      </motion.div>
     </div>
   );
 }

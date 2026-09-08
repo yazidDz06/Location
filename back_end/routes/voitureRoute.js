@@ -1,106 +1,197 @@
-const Voiture = require("../models/Voiture");
-const mongoose = require("mongoose");
 const router = require("express").Router();
-const adminMiddleware = require("../middleware/adminMiddleware");
+
+const Voiture = require("../models/Voiture");
+const Reservation = require("../models/Reservation");
+const ApiError = require("../utils/ApiError");
+const asyncHandler = require("../utils/asyncHandler");
+const logger = require("../utils/logger");
+
 const authMiddleware = require("../middleware/authMiddleware");
+const adminMiddleware = require("../middleware/adminMiddleware");
+const validate = require("../middleware/validate");
+const { limiteurEcriture } = require("../middleware/rateLimit");
+const schemas = require("../validation/schemas");
 
-// Get all cars
-router.get("/",async (req, res) => {
-  try {
-    const voitures = await Voiture.find();
-    res.status(200).json(voitures);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
+/**
+ * Enrichit des véhicules avec leur disponibilité *à l'instant présent*,
+ * déduite des réservations actives plutôt que d'un drapeau stocké.
+ * Une seule requête agrégée couvre toute la liste (pas de N+1).
+ */
+async function avecDisponibilite(voitures) {
+  const maintenant = new Date();
+  const ids = voitures.map((v) => v._id);
 
-// Create a new car
-router.post("/",authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const { marque, modele, annee, type, immatriculation, prixParJour, kilometrage, imageUrl } = req.body;
-    const voiture = await Voiture.create({
-      marque,
-      modele,
-      annee,
-      type,
-      immatriculation,
-      prixParJour,
-      kilometrage,
-      imageUrl,
-    });
-    res.status(201).json(voiture);
-  } catch (error) {
-    res.status(400).json({ message: "Erreur lors de la création de la voiture", error: error.message });
-  }
-});
+  const occupees = await Reservation.distinct("voiture", {
+    voiture: { $in: ids },
+    statut: { $in: Reservation.STATUTS_BLOQUANTS },
+    dateDebut: { $lte: maintenant },
+    dateFin: { $gte: maintenant },
+  });
 
-// Get a single car
-router.get("/:id",async (req, res) => {
-  const { id } = req.params;
-  if(!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "ID invalide" });
-  }
-  try {
-    const voiture = await Voiture.findById(id);
+  const ensembleOccupees = new Set(occupees.map((id) => id.toString()));
+
+  return voitures.map((v) => {
+    const objet = typeof v.toObject === "function" ? v.toObject() : { ...v };
+    objet.disponible =
+      !objet.horsService && !ensembleOccupees.has(objet._id.toString());
+    return objet;
+  });
+}
+
+/* ──────────────────────── Catalogue public ──────────────────────────────── */
+
+router.get(
+  "/",
+  validate({ query: schemas.filtreVoitures }),
+  asyncHandler(async (req, res) => {
+    const { marque, type, prixMin, prixMax, page = 1, limite = 50 } =
+      req.donneesQuery ?? {};
+
+    const filtre = {};
+    if (type) filtre.type = type;
+    if (marque) {
+      // La saisie utilisateur est échappée avant d'entrer dans une RegExp :
+      // sans cela, un motif comme « (a+)+$ » provoque un ReDoS.
+      const echappee = marque.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filtre.marque = new RegExp(echappee, "i");
+    }
+    if (prixMin !== undefined || prixMax !== undefined) {
+      filtre.prixParJour = {};
+      if (prixMin !== undefined) filtre.prixParJour.$gte = prixMin;
+      if (prixMax !== undefined) filtre.prixParJour.$lte = prixMax;
+    }
+
+    const voitures = await Voiture.find(filtre)
+      .sort({ createdAt: -1 })
+      // La pagination borne le travail du serveur : sans elle, un catalogue
+      // qui grossit finit par transformer chaque appel en coûteux scan complet.
+      .skip((page - 1) * limite)
+      .limit(limite)
+      .lean();
+
+    res.json(await avecDisponibilite(voitures));
+  })
+);
+
+router.get(
+  "/:id",
+  validate({ params: schemas.paramId }),
+  asyncHandler(async (req, res) => {
+    const voiture = await Voiture.findById(req.params.id).lean();
     if (!voiture) {
-      return res.status(404).json({ message: "Voiture non trouvée" });
-    }
-    res.status(200).json(voiture);
-  } catch (error) {
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
-  }
-});
-
-// Update a car
-router.put("/:id",authMiddleware ,adminMiddleware, async (req, res) => {
-  const { id } = req.params;
-  const { prixParJour, disponible, kilometrage } = req.body;
-
-  try {
-    // Vérifier que l'ID est valide
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "ID invalide" });
+      throw ApiError.introuvable("Voiture non trouvée");
     }
 
-    // Construire un objet de mise à jour avec uniquement les champs autorisés
-    const updateData = {};
-    if (typeof prixParJour === "number") updateData.prixParJour = prixParJour;
-    if (typeof disponible === "boolean") updateData.disponible = disponible;
-    if (typeof kilometrage === "number") updateData.kilometrage = kilometrage;
+    const [enrichie] = await avecDisponibilite([voiture]);
+    res.json(enrichie);
+  })
+);
 
-    if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({ message: "Aucune donnée valide à mettre à jour" });
+/** Périodes déjà réservées — permet au front de griser les dates prises. */
+router.get(
+  "/:id/indisponibilites",
+  validate({ params: schemas.paramId }),
+  asyncHandler(async (req, res) => {
+    const periodes = await Reservation.find({
+      voiture: req.params.id,
+      statut: { $in: Reservation.STATUTS_BLOQUANTS },
+      dateFin: { $gte: new Date() },
+    })
+      // On n'expose que les dates : le client et le montant d'une réservation
+      // tierce ne regardent pas les visiteurs.
+      .select("dateDebut dateFin -_id")
+      .lean();
+
+    res.json(periodes);
+  })
+);
+
+/* ──────────────────────── Administration ────────────────────────────────── */
+
+router.post(
+  "/",
+  authMiddleware,
+  adminMiddleware,
+  limiteurEcriture,
+  validate({ body: schemas.creationVoiture }),
+  asyncHandler(async (req, res) => {
+    const existe = await Voiture.exists({
+      immatriculation: req.body.immatriculation,
+    });
+    if (existe) {
+      throw ApiError.conflit("Cette immatriculation est déjà enregistrée");
     }
+
+    const voiture = await Voiture.create(req.body);
+
+    logger.info("Voiture ajoutée", {
+      voiture: voiture._id.toString(),
+      admin: req.user._id.toString(),
+    });
+
+    res.status(201).json({ ...voiture.toObject(), disponible: true });
+  })
+);
+
+router.put(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  limiteurEcriture,
+  validate({ params: schemas.paramId, body: schemas.majVoiture }),
+  asyncHandler(async (req, res) => {
+    // `disponible` n'est pas un champ stocké : l'admin pilote `horsService`.
+    const { disponible, ...champs } = req.body;
+    if (disponible !== undefined) champs.horsService = !disponible;
 
     const voiture = await Voiture.findByIdAndUpdate(
-      id,
-      { $set: updateData },
+      req.params.id,
+      { $set: champs },
       { new: true, runValidators: true }
-    );
+    ).lean();
 
     if (!voiture) {
-      return res.status(404).json({ message: "Voiture non trouvée" });
+      throw ApiError.introuvable("Voiture non trouvée");
     }
 
-    res.status(200).json(voiture);
-  } catch (error) {
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
-  }
-});
+    const [enrichie] = await avecDisponibilite([voiture]);
+    res.json(enrichie);
+  })
+);
 
+router.delete(
+  "/:id",
+  authMiddleware,
+  adminMiddleware,
+  limiteurEcriture,
+  validate({ params: schemas.paramId }),
+  asyncHandler(async (req, res) => {
+    // Supprimer un véhicule encore réservé laisserait des réservations
+    // orphelines, impossibles à honorer comme à afficher.
+    const reservationActive = await Reservation.exists({
+      voiture: req.params.id,
+      statut: { $in: Reservation.STATUTS_BLOQUANTS },
+      dateFin: { $gte: new Date() },
+    });
 
-// Delete a car
-router.delete("/:id",authMiddleware ,adminMiddleware, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const voiture = await Voiture.findByIdAndDelete(id);
+    if (reservationActive) {
+      throw ApiError.conflit(
+        "Ce véhicule a des réservations en cours. Mettez-le hors service au lieu de le supprimer."
+      );
+    }
+
+    const voiture = await Voiture.findByIdAndDelete(req.params.id);
     if (!voiture) {
-      return res.status(404).json({ message: "Voiture non trouvée" });
+      throw ApiError.introuvable("Voiture non trouvée");
     }
-    res.status(200).json({ message: "Voiture supprimée" });
-  } catch (error) {
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
-  }
-});
 
-module.exports = router; 
+    logger.info("Voiture supprimée", {
+      voiture: req.params.id,
+      admin: req.user._id.toString(),
+    });
+
+    res.json({ message: "Voiture supprimée" });
+  })
+);
+
+module.exports = router;

@@ -1,45 +1,56 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const ApiError = require("../utils/ApiError");
+const asyncHandler = require("../utils/asyncHandler");
+const { verifierJetonAcces, NOM_COOKIE_ACCES } = require("../services/tokenService");
 
-const authMiddleware = async (req, res, next) => {
+/**
+ * Authentifie la requête à partir du cookie httpOnly contenant le jeton
+ * d'accès.
+ *
+ * L'utilisateur est rechargé depuis la base à chaque requête : un compte
+ * supprimé ou rétrogradé perd immédiatement ses droits, sans attendre
+ * l'expiration du jeton. Le coût d'une lecture indexée par _id est négligeable
+ * face au risque d'un rôle périmé porté par un JWT.
+ */
+const authMiddleware = asyncHandler(async (req, _res, next) => {
+  const jeton = req.cookies?.[NOM_COOKIE_ACCES];
+
+  if (!jeton) {
+    throw ApiError.nonAuthentifie("Authentification requise");
+  }
+
+  let charge;
   try {
-    const token = req.cookies?.token;
-
-   
-    if (!token) {
-      
-      return res.status(401).json({ message: "Non autorisé, token manquant" });
+    charge = verifierJetonAcces(jeton);
+  } catch (err) {
+    if (err instanceof jwt.TokenExpiredError) {
+      // Code distinct : le front sait qu'il doit tenter un /users/refresh
+      // plutôt que de rediriger l'utilisateur vers la page de connexion.
+      throw new ApiError(401, "Jeton expiré", { code: "JETON_EXPIRE" });
     }
+    throw ApiError.nonAuthentifie("Session invalide");
+  }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-   
+  const utilisateur = await User.findById(charge.sub).select(
+    "+motDePasseModifieLe"
+  );
 
-    
-    const user = await User.findById(decoded.id).select("-password");
-    if (!user) {
-      console.log(" Utilisateur non trouvé pour ID:", decoded.id);
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
-    }
+  if (!utilisateur) {
+    throw ApiError.nonAuthentifie("Session invalide");
+  }
 
-    
-    req.user = user;
-
-
-
-    next(); 
-  } catch (error) {
-    console.error(" Erreur authMiddleware:", error.message);
-
-    
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token expiré" });
-    } else if (error.name === "JsonWebTokenError") {
-      return res.status(403).json({ message: "Token invalide" });
-    } else {
-      return res.status(500).json({ message: "Erreur interne d’authentification" });
+  // Un mot de passe changé après l'émission du jeton invalide ce jeton :
+  // c'est ce qui rend « se déconnecter partout » réellement effectif.
+  if (utilisateur.motDePasseModifieLe) {
+    const emisLe = charge.iat * 1000;
+    if (emisLe < utilisateur.motDePasseModifieLe.getTime()) {
+      throw ApiError.nonAuthentifie("Session expirée, reconnectez-vous");
     }
   }
-};
+
+  req.user = utilisateur;
+  next();
+});
 
 module.exports = authMiddleware;
-

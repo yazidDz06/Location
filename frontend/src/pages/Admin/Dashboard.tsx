@@ -1,166 +1,212 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { useFetchData } from "@/utils/api";
-import type { Voiture } from "../CarsDetail";
-import type { Users } from "@/utils/api";
-import type { Reservation } from "../Formulaire";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { Car, Users, CalendarCheck, TrendingUp, Trash2 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+import LayoutAdmin from "./LayoutAdmin";
+import {
+  Bouton,
+  Carte,
+  Chargement,
+  EtatVide,
+  Etiquette,
+} from "@/components/ui/primitives";
+import { api, ApiError } from "@/lib/api";
+import { useRequete, formaterPrix, formaterDate } from "@/lib/hooks";
+import { useAuth } from "@/store/auth";
+import type { Utilisateur, Voiture, Reservation } from "@/lib/types";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { utilisateur: moi } = useAuth();
 
+  const voitures = useRequete<Voiture[]>("/voitures");
+  const utilisateurs = useRequete<Utilisateur[]>("/users/All");
+  const reservations = useRequete<Reservation[]>("/appointments");
 
-  const {
-    data: cars,
-    loading: loadingCars,
-    error: errorCars,
-  } = useFetchData<Voiture[]>(`${API_URL}/voitures`);
+  const [suppressionEnCours, setSuppressionEnCours] = useState<string | null>(null);
 
- 
-  const {
-    data: usersData,
-    loading: loadingUsers,
-    error: errorUsers,
-  } = useFetchData< Users[] >(`${API_URL}/users/All`);
+  const chargement =
+    voitures.chargement || utilisateurs.chargement || reservations.chargement;
 
-  
-  const {
-    data: reservations,
-    loading: loadingReservations,
-    error: errorReservations,
-  } = useFetchData<Reservation[]>(`${API_URL}/appointments`);
+  const revenus =
+    reservations.donnees
+      ?.filter((r) => r.statut !== "annulée")
+      .reduce((total, r) => total + r.prixTotal, 0) ?? 0;
 
-  if (loadingCars || loadingUsers || loadingReservations) {
-    return <p className="text-center mt-10">Chargement des données...</p>;
-  }
+  const enAttente =
+    reservations.donnees?.filter((r) => r.statut === "en_attente").length ?? 0;
 
-  if (errorCars || errorUsers || errorReservations) {
-    return (
-      <p className="text-center text-red-500 mt-10">
-        Erreur lors du chargement des données.
-      </p>
-    );
-  }
+  const supprimerUtilisateur = async (cible: Utilisateur) => {
+    if (
+      !confirm(
+        `Supprimer définitivement le compte de ${cible.prenom} ${cible.nom} ?`
+      )
+    )
+      return;
 
-  const totalVoitures = cars?.length || 0;
-  const totalUsers = usersData?.length || 0;
-  const totalReservations = reservations?.length || 0;
-
-  const handleDeleteUser = async (id: string) => {
-    if (!confirm("Voulez-vous vraiment supprimer cet utilisateur ?")) return;
-
+    setSuppressionEnCours(cible.id);
     try {
-      const res = await fetch(`${API_URL}/users/${id}`, {
-        method: "DELETE",
-        credentials:"include"
-      });
-      if (!res.ok) throw new Error("Erreur lors de la suppression");
-      alert("Utilisateur supprimé avec succès !");
-      window.location.reload();
-    } catch (error) {
-      console.error(error);
-      alert("Erreur lors de la suppression.");
+      await api.delete(`/users/${cible.id}`);
+      toast.success("Utilisateur supprimé");
+      utilisateurs.recharger();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.messageComplet : "Suppression impossible"
+      );
+    } finally {
+      setSuppressionEnCours(null);
     }
   };
 
+  const statistiques = [
+    {
+      libelle: "Véhicules",
+      valeur: voitures.donnees?.length ?? 0,
+      icone: Car,
+      href: "/admin/voitures",
+    },
+    {
+      libelle: "Clients inscrits",
+      valeur: utilisateurs.donnees?.length ?? 0,
+      icone: Users,
+    },
+    {
+      libelle: "Réservations",
+      valeur: reservations.donnees?.length ?? 0,
+      icone: CalendarCheck,
+      href: "/admin/reservations",
+      badge: enAttente > 0 ? `${enAttente} en attente` : undefined,
+    },
+    {
+      libelle: "Chiffre d'affaires",
+      valeur: `${formaterPrix(revenus)} DA`,
+      icone: TrendingUp,
+    },
+  ];
+
   return (
-    <div className="p-10 bg-gray-100 dark:bg-gray-900 min-h-screen">
-      <h1 className="text-3xl font-bold text-center mb-10 dark:text-white">
-        Tableau de bord
-      </h1>
-
-      {/* === Cartes statistiques === */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-        {/* Voitures */}
-        <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 text-center cursor-pointer hover:scale-105 transition-transform"
-          onClick={() => navigate("/admin/cars")}
-        >
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
-            Voitures disponibles
-          </h2>
-          <p className="text-4xl font-bold text-blue-600 mt-3">
-            {totalVoitures}
-          </p>
-        </div>
-
-        {/* Utilisateurs */}
-        <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 text-center cursor-pointer hover:scale-105 transition-transform"
-         
-        >
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
-            Utilisateurs enregistrés
-          </h2>
-          <p className="text-4xl font-bold text-green-600 mt-3">
-            {totalUsers}
-          </p>
-        </div>
-
-        {/* Réservations */}
-        <div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 text-center cursor-pointer hover:scale-105 transition-transform"
-          onClick={() => navigate("/resAdmin")}
-        >
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
-            Réservations totales
-          </h2>
-          <p className="text-4xl font-bold text-orange-600 mt-3">
-            {totalReservations}
-          </p>
-        </div>
-      </div>
-
-      {/* === Liste des utilisateurs === */}
-      <div className="mt-12 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4 text-center">
-          Liste des utilisateurs
-        </h2>
-
-        <table className="w-full text-sm text-left text-gray-600 dark:text-gray-300">
-          <thead className="text-xs uppercase bg-gray-200 dark:bg-gray-700">
-            <tr>
-              <th className="px-4 py-3">Nom</th>
-              <th className="px-4 py-3">Prénom</th>
-              <th className="px-4 py-3">Téléphone</th>
-              <th className="px-4 py-3">Date de naissance</th>
-              <th className="px-4 py-3 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usersData?.length ? (
-              usersData.map((user,index) => (
-                <tr
-                  key={index}
-                  className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+    <LayoutAdmin
+      titre="Vue d'ensemble"
+      description="L'activité de votre agence en un coup d'œil."
+    >
+      {chargement ? (
+        <Chargement />
+      ) : (
+        <div className="space-y-10">
+          {/* ── Statistiques ── */}
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {statistiques.map((stat, index) => (
+              <motion.div
+                key={stat.libelle}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.08 }}
+              >
+                <Carte
+                  onClick={stat.href ? () => navigate(stat.href) : undefined}
+                  className={cnStat(Boolean(stat.href))}
                 >
-                  <td className="px-4 py-2">{user.nom}</td>
-                  <td className="px-4 py-2">{user.prenom}</td>
-                  <td className="px-4 py-2">{user.numero}</td>
-                  <td className="px-4 py-2">{user.dateNaissance}</td>
-                  <td className="px-4 py-2 text-center">
-                    <button
-                      onClick={() => handleDeleteUser(user._id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm"
-                    >
-                      Supprimer
-                    </button>
-                  </td>
-                </tr>
-              ))
+                  <div className="flex items-start justify-between">
+                    <span className="grid size-11 place-items-center rounded-xl bg-[var(--or)]/10 text-[var(--or)]">
+                      <stat.icone className="size-5" />
+                    </span>
+                    {stat.badge && <Etiquette ton="or">{stat.badge}</Etiquette>}
+                  </div>
+                  <p className="mt-5 font-display text-3xl">{stat.valeur}</p>
+                  <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">
+                    {stat.libelle}
+                  </p>
+                </Carte>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* ── Utilisateurs ── */}
+          <Carte className="overflow-hidden">
+            <div className="border-b border-border px-6 py-5">
+              <h2 className="text-xl">Clients inscrits</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {utilisateurs.donnees?.length ?? 0} compte(s) enregistré(s)
+              </p>
+            </div>
+
+            {utilisateurs.erreur ? (
+              <EtatVide titre="Chargement impossible" description={utilisateurs.erreur} />
+            ) : utilisateurs.donnees?.length === 0 ? (
+              <EtatVide titre="Aucun client inscrit" />
             ) : (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="text-center py-4 text-gray-500 dark:text-gray-400"
-                >
-                  Aucun utilisateur trouvé.
-                </td>
-              </tr>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[42rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                      <th className="px-6 py-4 font-medium">Nom</th>
+                      <th className="px-6 py-4 font-medium">Téléphone</th>
+                      <th className="px-6 py-4 font-medium">Naissance</th>
+                      <th className="px-6 py-4 font-medium">Rôle</th>
+                      <th className="px-6 py-4 text-right font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {utilisateurs.donnees?.map((u) => (
+                      <tr
+                        key={u.id}
+                        className="border-b border-border-subtile last:border-0 transition-colors hover:bg-accent/40"
+                      >
+                        <td className="px-6 py-4">
+                          {u.prenom} {u.nom}
+                        </td>
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {u.numero}
+                        </td>
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {u.dateNaissance ? formaterDate(u.dateNaissance) : "—"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Etiquette ton={u.role === "admin" ? "or" : "neutre"}>
+                            {u.role}
+                          </Etiquette>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {/* L'API refuse aussi qu'un admin se supprime :
+                              on masque simplement le bouton pour l'annoncer. */}
+                          {u.id === moi?.id ? (
+                            <span className="text-xs text-muted-foreground">
+                              Vous
+                            </span>
+                          ) : (
+                            <Bouton
+                              variante="danger"
+                              taille="sm"
+                              chargement={suppressionEnCours === u.id}
+                              onClick={() => supprimerUtilisateur(u)}
+                            >
+                              <Trash2 className="size-3.5" />
+                              Supprimer
+                            </Bouton>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </Carte>
+        </div>
+      )}
+    </LayoutAdmin>
   );
+}
+
+/** Classe d'une tuile de statistique, cliquable ou non. */
+function cnStat(cliquable: boolean) {
+  return [
+    "p-6 h-full",
+    cliquable &&
+      "cursor-pointer transition-douce hover:-translate-y-1 hover:border-[var(--or)]/35 hover:ombre-portee",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

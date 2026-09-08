@@ -1,112 +1,210 @@
-import { useSendData } from "@/utils/api";
-import type { Voiture } from "../CarsDetail";
-import { useState, useEffect } from "react";
-import {  useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-export default function CarUpdate(){
-    type CarUpdate = Partial<Pick<Voiture, "prixParJour" | "kilometrage" | "disponible">>;
+import { ArrowLeft } from "lucide-react";
 
-    const { id } = useParams<{ id: string }>();
-    const { sendData, data, loading, error } = useSendData<CarUpdate, Voiture>(`${API_URL}/voitures/${id}`, "PUT");
- 
-    const [formData, setFormData] = useState<CarUpdate>({
-        prixParJour:0,
-        kilometrage:0,
-        disponible:false,
-    });
-     useEffect(() => {
-    if (data) {
-      toast.success(" Voiture mise à jour avec succès !");
-      console.log("Voiture mise à jour avec succès:", data);
-    }
-  }, [data]);
+import LayoutAdmin from "./LayoutAdmin";
+import {
+  Bouton,
+  Carte,
+  Champ,
+  Chargement,
+  EtatVide,
+} from "@/components/ui/primitives";
+import { api, ApiError } from "@/lib/api";
+import { useRequete, formaterPrix } from "@/lib/hooks";
+import type { Voiture } from "@/lib/types";
 
+export default function CarUpdate() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const { donnees: voiture, chargement } = useRequete<Voiture>(
+    id ? `/voitures/${id}` : null
+  );
+
+  const [formulaire, setFormulaire] = useState({
+    prixParJour: "",
+    kilometrage: "",
+    disponible: true,
+  });
+  const [erreurs, setErreurs] = useState<Record<string, string>>({});
+  const [envoi, setEnvoi] = useState(false);
+
+  // Le formulaire est pré-rempli dès l'arrivée des données du véhicule.
   useEffect(() => {
-    if (error) {
-      toast.error(` Erreur lors de la mise à jour : ${error}`);
-    }
-  }, [error]);
+    if (!voiture) return;
+    setFormulaire({
+      prixParJour: String(voiture.prixParJour),
+      kilometrage: String(voiture.kilometrage),
+      disponible: !voiture.horsService,
+    });
+  }, [voiture]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type } = e.target;
-        setFormData({
-            ...formData,
-            [name]: type === "checkbox" ? e.target.checked : value,
-        });
-    };
-    const carToSend = {
-    ...formData,
-   
-    prixParJour: Number(formData.prixParJour),
-    kilometrage: Number(formData.kilometrage),
+  const soumettre = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const nouvelles: Record<string, string> = {};
+    if (Number(formulaire.prixParJour) <= 0)
+      nouvelles.prixParJour = "Le prix doit être positif";
+    if (Number(formulaire.kilometrage) < 0)
+      nouvelles.kilometrage = "Le kilométrage ne peut pas être négatif";
+
+    setErreurs(nouvelles);
+    if (Object.keys(nouvelles).length > 0) return;
+
+    setEnvoi(true);
+    try {
+      await api.put<Voiture>(`/voitures/${id}`, {
+        prixParJour: Number(formulaire.prixParJour),
+        kilometrage: Number(formulaire.kilometrage),
+        disponible: formulaire.disponible,
+      });
+      toast.success("Véhicule mis à jour");
+      navigate("/admin/voitures");
+    } catch (err) {
+      const message =
+        err instanceof ApiError ? err.messageComplet : "Mise à jour impossible";
+      setErreurs({ global: message });
+      toast.error(message);
+    } finally {
+      setEnvoi(false);
+    }
   };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        sendData(carToSend);
-    };
-    {loading && <p className="text-blue-500 text-center">Mise à jour en cours...</p>}
-{error && <p className="text-red-500 text-center">{error}</p>}
+  if (chargement) {
+    return (
+      <LayoutAdmin titre="Modifier un véhicule">
+        <Chargement />
+      </LayoutAdmin>
+    );
+  }
 
+  if (!voiture) {
+    return (
+      <LayoutAdmin titre="Modifier un véhicule">
+        <EtatVide
+          titre="Véhicule introuvable"
+          action={
+            <Bouton onClick={() => navigate("/admin/voitures")}>
+              Retour au catalogue
+            </Bouton>
+          }
+        />
+      </LayoutAdmin>
+    );
+  }
 
-    return(
-       
-            <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-6">
-          Mettre à jour les détails de la voiture
-        </h1>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="prixParJour" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Prix par jour
-            </label>
-            <input
-              type="number"
-              id="prixParJour"
+  return (
+    <LayoutAdmin
+      titre={`${voiture.marque} ${voiture.modele}`}
+      description={`Immatriculation ${voiture.immatriculation} · ${voiture.annee}`}
+    >
+      <Link
+        to="/admin/voitures"
+        className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[var(--or)]"
+      >
+        <ArrowLeft className="size-4" />
+        Retour au catalogue
+      </Link>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_0.8fr]">
+        <Carte className="filet-or overflow-hidden">
+          <form onSubmit={soumettre} className="space-y-6 p-7" noValidate>
+            <h2 className="text-xl">Informations modifiables</h2>
+
+            <Champ
+              libelle="Prix par jour (DA)"
               name="prixParJour"
-              value={formData.prixParJour}
-              onChange={handleChange}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label htmlFor="kilometrage" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Kilométrage
-            </label>
-            <input
               type="number"
-              id="kilometrage"
+              min={1}
+              value={formulaire.prixParJour}
+              onChange={(e) => {
+                setFormulaire((p) => ({ ...p, prixParJour: e.target.value }));
+                setErreurs((p) => ({ ...p, prixParJour: "" }));
+              }}
+              erreur={erreurs.prixParJour}
+            />
+
+            <Champ
+              libelle="Kilométrage"
               name="kilometrage"
-              value={formData.kilometrage}
-              onChange={handleChange}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              required
+              type="number"
+              min={0}
+              value={formulaire.kilometrage}
+              onChange={(e) => {
+                setFormulaire((p) => ({ ...p, kilometrage: e.target.value }));
+                setErreurs((p) => ({ ...p, kilometrage: "" }));
+              }}
+              erreur={erreurs.kilometrage}
             />
-          </div>
-          <div className="mb-4">
-            <label htmlFor="disponible" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Disponible
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-[var(--surface)] p-4">
+              <input
+                type="checkbox"
+                checked={formulaire.disponible}
+                onChange={(e) =>
+                  setFormulaire((p) => ({ ...p, disponible: e.target.checked }))
+                }
+                className="mt-0.5 size-4 accent-[var(--or)]"
+              />
+              <span className="space-y-1">
+                <span className="block text-sm">Proposé à la location</span>
+                <span className="block text-xs text-muted-foreground">
+                  Décochez pour retirer le véhicule du catalogue (entretien,
+                  vente…). Les réservations en cours ne sont pas affectées.
+                </span>
+              </span>
             </label>
-            <input
-              type="checkbox"
-              id="disponible"
-              name="disponible"
-              checked={formData.disponible}
-              onChange={handleChange}
-              className="mt-1 block h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+
+            {erreurs.global && (
+              <div
+                role="alert"
+                className="rounded-xl border border-[var(--destructive)]/30 bg-[var(--destructive)]/8 px-4 py-3 text-sm text-[var(--destructive)]"
+              >
+                {erreurs.global}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Bouton type="submit" chargement={envoi}>
+                {envoi ? "Enregistrement…" : "Enregistrer"}
+              </Bouton>
+              <Bouton
+                type="button"
+                variante="fantome"
+                onClick={() => navigate("/admin/voitures")}
+              >
+                Annuler
+              </Bouton>
+            </div>
+          </form>
+        </Carte>
+
+        <Carte className="h-fit overflow-hidden">
+          {voiture.imageUrl && (
+            <img
+              src={voiture.imageUrl}
+              alt={`${voiture.marque} ${voiture.modele}`}
+              className="aspect-16/10 w-full object-cover"
             />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600"
-          >
-            Mettre à jour
-          </button>
-        </form>
+          )}
+          <dl className="space-y-3 p-6 text-sm">
+            {[
+              ["Marque", voiture.marque],
+              ["Modèle", voiture.modele],
+              ["Année", String(voiture.annee)],
+              ["Motorisation", voiture.type],
+              ["Prix actuel", `${formaterPrix(voiture.prixParJour)} DA / jour`],
+            ].map(([libelle, valeur]) => (
+              <div key={libelle} className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">{libelle}</dt>
+                <dd className="text-right capitalize">{valeur}</dd>
+              </div>
+            ))}
+          </dl>
+        </Carte>
       </div>
-    </div>
-    )
+    </LayoutAdmin>
+  );
 }
